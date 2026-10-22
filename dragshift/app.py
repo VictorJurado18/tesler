@@ -326,12 +326,14 @@ class DragShiftApp(QObject):
                     self.open_window(tools.PdfSnipWindow(paths[0], self.notify))
                 except UserError as e:
                     self.toasts.error(tr("Couldn't open {name}", name=tr(name)), tr(str(e)))
+            elif name == "Compress":
+                self.open_window(tools.CompressPdfWindow(paths, self.notify))
             else:
-                fns = {"Compress": lambda p: [imaging.compress_pdf(p)], "Split": imaging.split_pdf,
+                fns = {"Split": imaging.split_pdf,
                        "Rotate": lambda p: [imaging.rotate_pdf(p)], "Extract": imaging.extract_pdf_images}
                 f = fns[name]
                 self.submit(f"tool:{name}", paths, lambda: [o for p in paths for o in f(p)],
-                            {"Compress": "Compressing…", "Split": "Splitting…", "Rotate": "Rotating…",
+                            {"Split": "Splitting…", "Rotate": "Rotating…",
                              "Extract": "Extracting images…"}[name])
             return
         if name == "Text":

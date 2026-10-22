@@ -474,6 +474,15 @@ PT: dict[str, str] = {
         "Nenhuma tabela encontrada. Parece um PDF escaneado: rode o OCR antes.",
     "No tables found in this PDF.": "Nenhuma tabela encontrada neste PDF.",
 
+    # compress pdf
+    "Compress PDF": "Comprimir PDF",
+    "Balanced": "Equilibrado",
+    "Images resampled to 150 dpi, text and vectors untouched. Usually 40–80% smaller.":
+        "Imagens reamostradas para 150 dpi, texto e vetores intactos. Em geral 40–80% menor.",
+    "Other": "Outro",
+    "Keeps the best quality that fits. PDFs that are only text are already small and may not shrink much.":
+        "Mantém a melhor qualidade que couber. PDFs só de texto já são leves e podem não diminuir muito.",
+
     # unlock
     "Unlock": "Tirar senha",
     "Unlocked": "Sem senha",

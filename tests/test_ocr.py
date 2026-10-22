@@ -160,3 +160,38 @@ def test_download_rejects_corrupted(tmp_path, monkeypatch):
     with pytest.raises(UserError):
         bgremove.download_model()
     assert not bgremove.model_ready() and not any(tmp_path.iterdir())
+
+
+def _photo_pdf(path, pages=3):
+    import numpy as np
+    rng = np.random.default_rng(0)
+    doc = fitz.open()
+    for i in range(pages):
+        pg = doc.new_page()
+        arr = (rng.random((1400, 1000, 3)) * 60 + np.linspace(0, 190, 1000)[None, :, None]).astype("uint8")
+        buf = io.BytesIO()
+        Image.fromarray(arr).save(buf, "JPEG", quality=95)
+        pg.insert_image(pg.rect, stream=buf.getvalue())
+        pg.insert_text((50, 50), f"Página {i + 1}", fontsize=20)
+    doc.save(path)
+    return path
+
+
+import io  # noqa: E402
+
+
+def test_compress_pdf_to_target(tmp_path):
+    from dragshift import imaging
+    src = _photo_pdf(tmp_path / "fotos.pdf")
+    size = src.stat().st_size
+    target = size // 6
+    out, reached = imaging.compress_pdf_to(src, target)
+    assert reached and out.stat().st_size <= target
+    assert "Página 2" in fitz.open(out)[1].get_text()          # text survives
+
+
+def test_compress_pdf_target_unreachable(tmp_path):
+    from dragshift import imaging
+    p = make_pdf(tmp_path / "texto.pdf")
+    out, reached = imaging.compress_pdf_to(p, 50)                 # 50 bytes: impossible
+    assert not reached and out.exists()

@@ -1958,3 +1958,64 @@ class RenameWindow(ToolWindow):
         news = [str(n) for n, o in done]
         self.notify("tool:Rename", olds, news, "", undo=lambda: renamer.undo(done))
         self.close()
+
+
+# ================================================================ COMPRESS PDF
+class CompressPdfWindow(ToolWindow):
+    tool_name = "Compress"
+    TARGETS = [("5 MB", 5_000_000), ("2 MB", 2_000_000), ("1 MB", 1_000_000), ("500 KB", 500_000)]
+
+    def __init__(self, paths, notify):
+        super().__init__("Compress PDF", paths, notify, size=(560, 360))
+        row, self.mode = toggle_row(["Balanced", "Target size"])
+        self.mode.idClicked.connect(self._mode)
+        self.body.addLayout(row)
+        self.balanced_note = QLabel(tr("Images resampled to 150 dpi, text and vectors untouched. Usually 40–80% smaller."))
+        self.balanced_note.setObjectName("dim")
+        self.balanced_note.setWordWrap(True)
+        self.body.addWidget(self.balanced_note)
+
+        self.target_box = QWidget()
+        tl = QVBoxLayout(self.target_box)
+        tl.setContentsMargins(0, 0, 0, 0)
+        tl.addWidget(QLabel(tr("Make each file under")))
+        trow, self.tgrp = toggle_row([t for t, _ in self.TARGETS] + [tr("Other")], 1)
+        self.tgrp.idClicked.connect(lambda i: self.custom.setEnabled(i == len(self.TARGETS)))
+        from PySide6.QtWidgets import QDoubleSpinBox
+        self.custom = QDoubleSpinBox()
+        self.custom.setRange(0.05, 500)
+        self.custom.setDecimals(2)
+        self.custom.setValue(3.0)
+        self.custom.setSuffix(" MB")
+        self.custom.setEnabled(False)
+        trow.insertWidget(trow.count() - 1, self.custom)
+        tl.addLayout(trow)
+        note = QLabel(tr("Keeps the best quality that fits. PDFs that are only text are already small and may not shrink much."))
+        note.setObjectName("dim")
+        note.setWordWrap(True)
+        tl.addWidget(note)
+        self.body.addWidget(self.target_box)
+        self.body.addStretch(1)
+        label = tr("Compress") if len(self.paths) == 1 else tr("Compress {n} files", n=len(self.paths))
+        self.body.addLayout(self.footer(label, self.save))
+        self._mode(0)
+
+    def _mode(self, i):
+        self.balanced_note.setVisible(i == 0)
+        self.target_box.setVisible(i == 1)
+
+    def _target(self) -> tuple[int, str]:
+        i = self.tgrp.checkedId()
+        if i < len(self.TARGETS):
+            return self.TARGETS[i][1], self.TARGETS[i][0]
+        mb = self.custom.value()
+        return int(mb * 1_000_000), f"{mb:g} MB"
+
+    def save(self):
+        paths = [str(p) for p in self.paths]
+        if self.mode.checkedId() == 0:
+            self.run(lambda: [imaging.compress_pdf(p) for p in paths], "Compressing…")
+            return
+        limit, label = self._target()
+        self.run(lambda: [imaging.compress_pdf_to(p, limit)[0] for p in paths], "Compressing…",
+                 tr("target {label}", label=label))

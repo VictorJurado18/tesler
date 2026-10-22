@@ -320,6 +320,59 @@ def protect_pdf(src: str | Path, password: str) -> Path:
     return out
 
 
+# (image dpi, jpeg quality) from best to smallest
+PDF_LADDER = [(220, 85), (200, 80), (170, 75), (150, 70), (130, 62), (110, 55), (96, 48), (80, 42),
+              (72, 36), (60, 30), (50, 25)]
+
+
+def _pdf_bytes(src: str | Path, dpi: int | None, quality: int) -> bytes:
+    with open_pdf(src) as doc:
+        if dpi:
+            try:
+                doc.rewrite_images(dpi_threshold=dpi + 10, dpi_target=dpi, quality=quality, lossy=True,
+                                   lossless=True, bitonal=True, color=True, gray=True, set_to_gray=False)
+            except Exception:
+                pass
+        return doc.tobytes(garbage=4, deflate=True, deflate_images=True, deflate_fonts=True,
+                           clean=True, use_objstms=1)
+
+
+def compress_pdf_to(src: str | Path, max_bytes: int, progress=None) -> tuple[Path, bool]:
+    """Best-looking version under `max_bytes` (binary search over PDF_LADDER).
+    Returns (out, reached). If even the smallest setting is too big (PDF is mostly text/
+    vector, nothing left to squeeze), the smallest version is saved and reached=False."""
+    out = sibling(src, "Compressed", ".pdf")
+    tries = 0
+
+    def attempt(i):
+        nonlocal tries
+        tries += 1
+        if progress:
+            progress(tries)
+        return _pdf_bytes(src, *PDF_LADDER[i]) if i >= 0 else _pdf_bytes(src, None, 0)
+
+    best = attempt(-1)                     # lossless only: images untouched
+    if len(best) <= max_bytes:
+        out.write_bytes(best)
+        return out, True
+    lo, hi, fit = 0, len(PDF_LADDER) - 1, None
+    smallest = attempt(hi)
+    if len(smallest) > max_bytes:
+        out.write_bytes(smallest)
+        return out, False
+    fit = smallest
+    hi -= 1
+    while lo <= hi:                        # first (= best quality) index that fits
+        mid = (lo + hi) // 2
+        data = attempt(mid)
+        if len(data) <= max_bytes:
+            fit, hi = data, mid - 1
+        else:
+            lo = mid + 1
+    out.write_bytes(fit)
+    return out, True
+
+
 def pdf_lock_state(src: str | Path) -> str:
     """'open' (no encryption), 'password' (needs a password to open),
     'restricted' (opens, but encrypted with an owner password / restrictions)."""

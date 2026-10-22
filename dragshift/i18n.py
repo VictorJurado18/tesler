@@ -352,4 +352,27 @@ PT: dict[str, str] = {
     "Saving snip…": "Salvando recorte…",
     "Snip saved": "Recorte salvo",
     "page {n} snip": "página {n} recorte",
+
+    # copy text / OCR
+    "Text": "Texto",
+    "Copy the text (OCR)": "Copiar o texto (OCR)",
+    "Copy text": "Copiar texto",
+    "Copy the text inside the selection (Ctrl+Shift+C)": "Copiar o texto da seleção (Ctrl+Shift+C)",
+    "Reading…": "Lendo…",
+    "Reading text…": "Lendo texto…",
+    "Text copied ✓": "Texto copiado ✓",
+    "Text copied": "Texto copiado",
+    "No text found in this area.": "Nenhum texto encontrado nesta área.",
+    "No text found": "Nenhum texto encontrado",
+    "No readable text in this image.": "Nenhum texto legível nesta imagem.",
+    "Couldn't read the text": "Não foi possível ler o texto",
+    "from the PDF": "direto do PDF",
+    "recognised (OCR) — check it": "reconhecido por OCR — confira",
+    "{n} characters, {src}: “{preview}”": "{n} caracteres, {src}: “{preview}”",
+    "{n} characters: “{preview}”": "{n} caracteres: “{preview}”",
+    "Text recognition (OCR) needs Windows 10 or 11.": "O reconhecimento de texto (OCR) precisa do Windows 10 ou 11.",
+    "The OCR component isn't installed yet. Open DragShift with “Iniciar DragShift.bat” once to install it.":
+        "O componente de OCR ainda não está instalado. Abra o DragShift uma vez pelo “Iniciar DragShift.bat” para instalar.",
+    "Windows has no OCR language installed. Add one in Settings → Time & language → Language (e.g. Português (Brasil)).":
+        "O Windows não tem idioma de OCR instalado. Adicione em Configurações → Hora e idioma → Idioma (ex.: Português (Brasil)).",
 }

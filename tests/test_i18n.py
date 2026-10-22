@@ -30,6 +30,7 @@ def test_placeholders_match():
     ph = lambda s: sorted(re.findall(r"{(\w+)}", s))
     for en, pt in i18n.PT.items():
         assert ph(en) == ph(pt), en
+        assert "text" not in ph(en), f"{{text}} clashes with tr(text, ...): {en}"
 
 
 def test_report_in_portuguese(tmp_path: Path):

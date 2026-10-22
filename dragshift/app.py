@@ -32,7 +32,7 @@ IPC_NAME = ipc_name()
 
 GLYPHS = {"Compress": "⇲", "Metadata": "ⓘ", "Redact": "▮", "Crop": "⌗", "Edit": "☼",
           "Annotate": "✎", "Add BG": "▣", "Resize": "⤢", "Split": "✂", "Rotate": "⟳",
-          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚"}
+          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚", "Text": "¶"}
 
 HINTS = {
     "Compress": "Shrink file size", "Metadata": "View · remove GPS", "Redact": "Hide private info",
@@ -40,13 +40,14 @@ HINTS = {
     "Add BG": "Gradient backdrop", "Resize": "Change dimensions", "Split": "One PDF per page",
     "Rotate": "Turn pages 90°", "Merge": "Join into one PDF", "Protect": "Add a password",
     "Extract": "Save embedded images", "Snip": "Area → image",
+    "Text": "Copy the text (OCR)",
 }
 FORMAT_HINTS = {"JPG": "Small, universal", "PNG": "Lossless · transparency", "WEBP": "Smallest for web",
                 "HEIC": "iPhone format", "TIFF": "Print · archival", "AVIF": "Next-gen, tiny",
                 "BMP": "Uncompressed", "PDF": "Document", "ICO": "Windows icon", "GIF": "Legacy web",
                 "DOCX": "Editable Word", "TXT": "Plain text"}
 
-IMAGE_TOOLS = ["Compress", "Resize", "Crop", "Edit", "Annotate", "Redact", "Add BG", "Metadata"]
+IMAGE_TOOLS = ["Compress", "Resize", "Crop", "Edit", "Annotate", "Redact", "Add BG", "Text", "Metadata"]
 PDF_TOOLS = ["Snip", "Compress", "Split", "Rotate", "Protect", "Extract", "Metadata"]
 
 
@@ -288,6 +289,9 @@ class DragShiftApp(QObject):
                             {"Compress": "Compressing…", "Split": "Splitting…", "Rotate": "Rotating…",
                              "Extract": "Extracting images…"}[name])
             return
+        if name == "Text":
+            self.copy_image_text(paths)
+            return
         windows = {"Crop": tools.CropWindow, "Add BG": tools.AddBgWindow, "Annotate": tools.AnnotateWindow,
                    "Redact": tools.RedactWindow, "Edit": tools.EditWindow, "Metadata": tools.MetadataWindow}
         try:
@@ -302,6 +306,27 @@ class DragShiftApp(QObject):
         except Exception as e:  # noqa: BLE001
             traceback.print_exc()
             self.toasts.error(tr("Couldn't open {name}", name=tr(name)), friendly_error(e))
+
+    def copy_image_text(self, paths: list[str]):
+        """OCR one or more images and put the text on the clipboard."""
+        from . import ocr
+        card = self.toasts.new()
+        card.working(tr("Reading text…"), Path(paths[0]).name if len(paths) == 1 else tr("{n} files", n=len(paths)))
+
+        def work():
+            parts = [ocr.image_file_to_text(p) for p in paths]
+            return "\n\n".join(t for t in parts if t.strip())
+
+        def done(text):
+            if not text.strip():
+                card.error(tr("No text found"), tr("No readable text in this image."))
+                return
+            QGuiApplication.clipboard().setText(text)
+            preview = " ".join(text.split())
+            card.info(tr("Text copied"), tr("{n} characters: “{preview}”", n=len(text),
+                                            preview=preview[:90] + ("…" if len(preview) > 90 else "")), 6000)
+
+        tools.run_in_background(work, done, lambda msg: card.error(tr("Couldn't read the text"), msg))
 
     def open_window(self, w: QWidget):
         if hasattr(w, "submit"):

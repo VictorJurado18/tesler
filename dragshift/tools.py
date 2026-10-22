@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Callable
 
 from PIL import Image
-from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QTimer, QUrl
+from PySide6.QtCore import QObject, QPointF, QRectF, QRunnable, QSize, Qt, QThreadPool, QTimer, QUrl, Signal
 from PySide6.QtGui import (QColor, QDesktopServices, QFont, QGuiApplication, QImage, QKeySequence,
                            QPainter, QPainterPath, QPen, QPixmap, QPolygonF, QShortcut)
 from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QColorDialog, QComboBox, QFrame,
@@ -22,11 +22,45 @@ from . import imaging
 from .util import ui_family
 from .convert import open_image, open_preview
 from .glass import pil_from_qimage, qimage_from_pil
-from .util import file_size, human_size, sibling
+from .util import UserError, file_size, human_size, keep, release, sibling
 from .window import GlassWindow, ImageView
 from .i18n import plural, tr
 
 Notify = Callable[..., None]
+
+
+class _BgSignals(QObject):
+    done = Signal(object)
+    failed = Signal(str)
+
+
+class _BgJob(QRunnable):
+    """Run `fn` on the thread pool; `done`/`failed` are delivered on the UI thread."""
+
+    def __init__(self, fn):
+        super().__init__()
+        self.fn, self.sig = fn, _BgSignals()
+
+    def run(self):
+        try:
+            self.sig.done.emit(self.fn())
+        except UserError as e:
+            self.sig.failed.emit(tr(str(e)))
+        except Exception as e:  # noqa: BLE001
+            import traceback
+            traceback.print_exc()
+            self.sig.failed.emit(str(e) or e.__class__.__name__)
+
+
+def run_in_background(fn, on_done, on_failed):
+    job = keep(_BgJob(fn))
+
+    def finish(cb, v):
+        release(job)
+        cb(v)
+    job.sig.done.connect(lambda v: finish(on_done, v))
+    job.sig.failed.connect(lambda m: finish(on_failed, m))
+    QThreadPool.globalInstance().start(job)
 
 
 # ---------------------------------------------------------------- small widgets
@@ -1513,7 +1547,15 @@ class PdfSnipWindow(ToolWindow):
         self.copy_btn = QPushButton(tr("Copy"))
         self.copy_btn.setToolTip(tr("Copy the snip to paste it anywhere (Ctrl+C)"))
         self.copy_btn.clicked.connect(self.copy)
-        self.body.addLayout(self.footer("Save PNG", self.save, self.view.reset_sel, [self.copy_btn]))
+        self.text_btn = QPushButton(tr("Copy text"))
+        self.text_btn.setToolTip(tr("Copy the text inside the selection (Ctrl+Shift+C)"))
+        self.text_btn.clicked.connect(self.copy_text)
+        QShortcut(QKeySequence("Ctrl+Shift+C"), self, activated=self.copy_text)
+        self.status = QLabel()
+        self.status.setObjectName("dim")
+        self.status.setWordWrap(True)
+        self.body.addWidget(self.status)
+        self.body.addLayout(self.footer("Save PNG", self.save, self.view.reset_sel, [self.copy_btn, self.text_btn]))
         self.view.changed.connect(self._sel_changed)
         self.go(0)
 
@@ -1541,6 +1583,8 @@ class PdfSnipWindow(ToolWindow):
         if self.primary_btn is not None:
             self.primary_btn.setEnabled(ok)
         self.copy_btn.setEnabled(ok)
+        if not getattr(self, "_reading", False):
+            self.text_btn.setEnabled(ok)
         s, k = self.view.sel, self.view.k
         self.size_label.setText(f"{dims_text(round(s.width() * k), round(s.height() * k))} px" if ok else "")
 
@@ -1556,6 +1600,42 @@ class PdfSnipWindow(ToolWindow):
         QGuiApplication.clipboard().setImage(qimage_from_pil(im))
         self.copy_btn.setText(tr("Copied ✓"))
         QTimer.singleShot(1400, lambda: self.copy_btn.setText(tr("Copy")))
+
+    def copy_text(self):
+        """Text layer of the PDF if it has one (instant), otherwise Windows OCR (~1 s)."""
+        if not self.view.has_selection() or getattr(self, "_reading", False):
+            return
+        from . import ocr
+        path, page, frac = self.path, self.page, self._frac()
+        self._reading = True
+        self.text_btn.setEnabled(False)
+        self.text_btn.setText(tr("Reading…"))
+        self.status.setText("")
+
+        def done(res):
+            text, how = res
+            self._end_reading()
+            if not text.strip():
+                self.status.setText(tr("No text found in this area."))
+                return
+            QGuiApplication.clipboard().setText(text)
+            self.text_btn.setText(tr("Text copied ✓"))
+            QTimer.singleShot(1600, lambda: self.text_btn.setText(tr("Copy text")))
+            src = tr("from the PDF") if how == "pdf" else tr("recognised (OCR) — check it")
+            preview = " ".join(text.split())
+            preview = preview[:110] + ("…" if len(preview) > 110 else "")
+            self.status.setText(tr("{n} characters, {src}: “{preview}”", n=len(text), src=src, preview=preview))
+
+        def failed(msg):
+            self._end_reading()
+            self.status.setText(msg)
+
+        run_in_background(lambda: ocr.pdf_area_text(path, page, frac), done, failed)
+
+    def _end_reading(self):
+        self._reading = False
+        self.text_btn.setText(tr("Copy text"))
+        self.text_btn.setEnabled(self.view.has_selection())
 
     def save(self):
         """Saves in the background and keeps the window open, so you can snip several areas."""

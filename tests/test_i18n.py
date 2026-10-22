@@ -40,3 +40,20 @@ def test_report_in_portuguese(tmp_path: Path):
     Image.new("RGB", (300, 200), "red").save(out)
     r = report.summarize("tool:Rotate", [src], [out])
     assert r.title == "Girado 90°"
+
+
+def test_hub_flips_rings_only_once():
+    """Resting the cursor on the hub flipped Convert ⇄ Tools every ~0.4 s (bug)."""
+    from PySide6.QtWidgets import QApplication
+    from dragshift.radial import Item, RadialMenu
+    QApplication.instance() or QApplication([])
+    m = RadialMenu(lambda p: {"Convert": [Item("PNG")], "Tools": [Item("Crop", "x")]}, lambda p: "1 KB")
+    m.rings = m.build_rings([])
+    m.ring_names = list(m.rings)
+    m._set_hover(0)            # visit a petal
+    m._set_hover(-2)           # then rest on the hub
+    assert m.hub_timer.isActive()
+    m.next_ring()              # the timer fires once
+    assert m.ring_idx == 1
+    m._set_hover(-2)           # Windows keeps sending drag-move events on the hub
+    assert not m.hub_timer.isActive()

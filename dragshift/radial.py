@@ -278,6 +278,11 @@ class RadialMenu(QWidget):
         if len(self.ring_names) > 1:
             self.ring_idx = (self.ring_idx + 1) % len(self.ring_names)
             self.hover = -1
+            # one flip per visit: resting on the hub must not keep cycling the rings
+            # (Windows keeps sending drag-move events while the cursor is still, and
+            # each one re-entered the hub and restarted the timer)
+            self.hub_armed = False
+            self.hub_timer.stop()
             self.spring = [0.0] * len(self.items)
             self._swap = 0.0
             self.swap_anim.start()

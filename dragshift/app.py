@@ -32,14 +32,14 @@ IPC_NAME = ipc_name()
 
 GLYPHS = {"Compress": "⇲", "Metadata": "ⓘ", "Redact": "▮", "Crop": "⌗", "Edit": "☼",
           "Annotate": "✎", "Add BG": "▣", "Resize": "⤢", "Split": "✂", "Rotate": "⟳",
-          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈"}
+          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚"}
 
 HINTS = {
     "Compress": "Shrink file size", "Metadata": "View · remove GPS", "Redact": "Hide private info",
     "Crop": "Trim to a ratio", "Edit": "Light · colour · rotate", "Annotate": "Arrows · text · steps",
     "Add BG": "Gradient backdrop", "Resize": "Change dimensions", "Split": "One PDF per page",
     "Rotate": "Turn pages 90°", "Merge": "Join into one PDF", "Protect": "Add a password",
-    "Extract": "Save embedded images",
+    "Extract": "Save embedded images", "Snip": "Area → image",
 }
 FORMAT_HINTS = {"JPG": "Small, universal", "PNG": "Lossless · transparency", "WEBP": "Smallest for web",
                 "HEIC": "iPhone format", "TIFF": "Print · archival", "AVIF": "Next-gen, tiny",
@@ -47,7 +47,7 @@ FORMAT_HINTS = {"JPG": "Small, universal", "PNG": "Lossless · transparency", "W
                 "DOCX": "Editable Word", "TXT": "Plain text"}
 
 IMAGE_TOOLS = ["Compress", "Resize", "Crop", "Edit", "Annotate", "Redact", "Add BG", "Metadata"]
-PDF_TOOLS = ["Compress", "Split", "Rotate", "Protect", "Extract", "Metadata"]
+PDF_TOOLS = ["Snip", "Compress", "Split", "Rotate", "Protect", "Extract", "Metadata"]
 
 
 # ---------------------------------------------------------------- background jobs
@@ -250,7 +250,7 @@ class DragShiftApp(QObject):
         if cat == "image":
             rings["Tools"] = [Item(n, GLYPHS[n], key=f"tool:{n}", hint=HINTS[n]) for n in IMAGE_TOOLS]
         elif cat == "pdf":
-            names = PDF_TOOLS[:3] + (["Merge"] if len(same) > 1 else []) + PDF_TOOLS[3:]
+            names = PDF_TOOLS[:4] + (["Merge"] if len(same) > 1 else []) + PDF_TOOLS[4:]
             rings["Tools"] = [Item(n, GLYPHS[n], key=f"tool:{n}", hint=HINTS[n]) for n in names]
         return rings
 
@@ -275,6 +275,11 @@ class DragShiftApp(QObject):
                 self.open_window(tools.MetadataWindow(paths[0], self.notify, is_pdf=True))
             elif name == "Protect":
                 self.open_window(tools.ProtectWindow(paths[0], self.notify))
+            elif name == "Snip":
+                try:
+                    self.open_window(tools.PdfSnipWindow(paths[0], self.notify))
+                except UserError as e:
+                    self.toasts.error(tr("Couldn't open {name}", name=tr(name)), tr(str(e)))
             else:
                 fns = {"Compress": lambda p: [imaging.compress_pdf(p)], "Split": imaging.split_pdf,
                        "Rotate": lambda p: [imaging.rotate_pdf(p)], "Extract": imaging.extract_pdf_images}
@@ -522,7 +527,8 @@ def selftest() -> int:
             for w in (tools.CropWindow(str(src), n), tools.AddBgWindow(str(src), n), tools.EditWindow(str(src), n),
                       tools.AnnotateWindow(str(src), n), tools.RedactWindow(str(src), n),
                       tools.MetadataWindow(str(src), n), tools.CompressWindow([str(src)], n),
-                      tools.ResizeWindow([str(src)], n), tools.ProtectWindow(str(pdf), n)):
+                      tools.ResizeWindow([str(src)], n), tools.ProtectWindow(str(pdf), n),
+                      tools.PdfSnipWindow(str(pdf), n)):
                 w.close()
             ToastStack().info("ok", "ok").dismiss()
             check_text_renders()

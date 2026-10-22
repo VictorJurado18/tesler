@@ -338,4 +338,18 @@ PT: dict[str, str] = {
     "Looks good · {s} password": "Tudo certo · senha {s}",
     "strong": "forte", "okay": "razoável", "weak": "fraca",
     "Encrypting…": "Criptografando…",
+
+    # pdf snip
+    "Snip": "Recortar",
+    "Area → image": "Trecho → imagem",
+    "Snip from PDF": "Recortar trecho do PDF",
+    "Drag over the part you want": "Arraste sobre o trecho que você quer",
+    "Previous page (Page Up)": "Página anterior (Page Up)",
+    "Next page (Page Down)": "Próxima página (Page Down)",
+    "Page {p} of {n}": "Página {p} de {n}",
+    "Copy the snip to paste it anywhere (Ctrl+C)": "Copiar o recorte para colar em qualquer lugar (Ctrl+C)",
+    "Save PNG": "Salvar PNG",
+    "Saving snip…": "Salvando recorte…",
+    "Snip saved": "Recorte salvo",
+    "page {n} snip": "página {n} recorte",
 }

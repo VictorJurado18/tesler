@@ -1,4 +1,4 @@
-"""Tool windows: Compress, Resize, Crop, Edit, Annotate, Redact, Add BG, Metadata, Protect.
+"""Tool windows: Compress, Resize, Crop, Edit, Annotate, Redact, Add BG, Metadata, Protect, PDF snip.
 
 Every window opens on a fast, reduced-size preview. Saving runs on the full-resolution
 image in the background (the window closes immediately; a notification reports the result)."""
@@ -1427,3 +1427,144 @@ class ProtectWindow(ToolWindow):
     def save(self):
         pw, path = self.pw.text(), self.path
         self.run(lambda: [imaging.protect_pdf(path, pw)], "Encrypting…")
+
+
+# ================================================================ PDF SNIP
+class SnipView(CropView):
+    """CropView that starts with no selection: drag a box over the part you want."""
+
+    def __init__(self, image: QImage, k: float):
+        super().__init__(image, k)
+        self.sel = QRectF()
+
+    def has_selection(self) -> bool:
+        return self.sel.width() >= 4 and self.sel.height() >= 4
+
+    def reset_sel(self):
+        self.sel = QRectF()
+        self.update()
+        self.changed.emit()
+
+    def _hit(self, pos):
+        return super()._hit(pos) if self.has_selection() else None
+
+    def paint_overlay(self, p: QPainter, t: QRectF):
+        if self.has_selection():
+            super().paint_overlay(p, t)
+            return
+        f = QFont(ui_family(False))
+        f.setPixelSize(13)
+        f.setBold(True)
+        p.setFont(f)
+        txt = tr("Drag over the part you want")
+        w = p.fontMetrics().horizontalAdvance(txt) + 28
+        badge = QRectF(t.center().x() - w / 2, t.top() + 14, w, 28)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(20, 16, 32, 200))
+        p.drawRoundedRect(badge, 14, 14)
+        p.setPen(QColor(255, 255, 255))
+        p.drawText(badge, Qt.AlignCenter, txt)
+
+
+class PdfSnipWindow(ToolWindow):
+    """Pick a page, drag a box, get a sharp PNG of just that area (saved and/or copied)."""
+    tool_name = "Snip"
+    PREVIEW_DPI = 110
+    QUALITIES = [("150 dpi", 150), ("300 dpi", 300), ("600 dpi", 600)]
+
+    def __init__(self, path, notify):
+        super().__init__("Snip from PDF", path, notify, size=(860, 900))
+        self.n_pages = imaging.pdf_page_count(path)
+        self.page = 0
+        self.view = SnipView(QImage(), 1.0)
+        self.view.setMinimumSize(420, 420)
+        self.body.addWidget(self.view, 1)
+
+        nav = QHBoxLayout()
+        self.prev_btn = QPushButton("◀")
+        self.next_btn = QPushButton("▶")
+        self.prev_btn.setToolTip(tr("Previous page (Page Up)"))
+        self.next_btn.setToolTip(tr("Next page (Page Down)"))
+        self.prev_btn.clicked.connect(lambda: self.go(self.page - 1))
+        self.next_btn.clicked.connect(lambda: self.go(self.page + 1))
+        self.page_label = QLabel()
+        self.page_label.setMinimumWidth(130)
+        self.page_label.setAlignment(Qt.AlignCenter)
+        nav.addWidget(self.prev_btn)
+        nav.addWidget(self.page_label)
+        nav.addWidget(self.next_btn)
+        nav.addSpacing(16)
+        nav.addWidget(QLabel(tr("Quality")))
+        self.quality = QComboBox()
+        for label, v in self.QUALITIES:
+            self.quality.addItem(label, v)
+        self.quality.setCurrentIndex(1)
+        self.quality.currentIndexChanged.connect(self._update_k)
+        nav.addWidget(self.quality)
+        nav.addStretch(1)
+        self.size_label = QLabel()
+        self.size_label.setObjectName("dim")
+        nav.addWidget(self.size_label)
+        self.body.addLayout(nav)
+        QShortcut(QKeySequence(Qt.Key_PageUp), self, activated=lambda: self.go(self.page - 1))
+        QShortcut(QKeySequence(Qt.Key_PageDown), self, activated=lambda: self.go(self.page + 1))
+        QShortcut(QKeySequence.Copy, self, activated=self.copy)
+
+        self.copy_btn = QPushButton(tr("Copy"))
+        self.copy_btn.setToolTip(tr("Copy the snip to paste it anywhere (Ctrl+C)"))
+        self.copy_btn.clicked.connect(self.copy)
+        self.body.addLayout(self.footer("Save PNG", self.save, self.view.reset_sel, [self.copy_btn]))
+        self.view.changed.connect(self._sel_changed)
+        self.go(0)
+
+    # ------------------------------------------------------------ pages
+    def go(self, page: int):
+        if not 0 <= page < self.n_pages:
+            return
+        self.page = page
+        im = imaging.render_pdf_page(self.path, page, self.PREVIEW_DPI)
+        self.view.set_image(qimage_from_pil(im))
+        self.view.sel = QRectF()
+        self._update_k()
+        self.page_label.setText(tr("Page {p} of {n}", p=page + 1, n=self.n_pages))
+        self.prev_btn.setEnabled(page > 0)
+        self.next_btn.setEnabled(page < self.n_pages - 1)
+        self._sel_changed()
+
+    def _update_k(self, *_):
+        self.view.k = self.quality.currentData() / self.PREVIEW_DPI   # output px per preview px
+        self.view.update()
+        self._sel_changed()
+
+    def _sel_changed(self):
+        ok = self.view.has_selection()
+        if self.primary_btn is not None:
+            self.primary_btn.setEnabled(ok)
+        self.copy_btn.setEnabled(ok)
+        s, k = self.view.sel, self.view.k
+        self.size_label.setText(f"{dims_text(round(s.width() * k), round(s.height() * k))} px" if ok else "")
+
+    def _frac(self) -> tuple[float, float, float, float]:
+        s, W, H = self.view.sel, self.view.image.width(), self.view.image.height()
+        return (s.left() / W, s.top() / H, s.right() / W, s.bottom() / H)
+
+    # ------------------------------------------------------------ output
+    def copy(self):
+        if not self.view.has_selection():
+            return
+        im = imaging.snip_pdf(self.path, self.page, self._frac(), self.quality.currentData())
+        QGuiApplication.clipboard().setImage(qimage_from_pil(im))
+        self.copy_btn.setText(tr("Copied ✓"))
+        QTimer.singleShot(1400, lambda: self.copy_btn.setText(tr("Copy")))
+
+    def save(self):
+        """Saves in the background and keeps the window open, so you can snip several areas."""
+        if not self.view.has_selection():
+            return
+        path, page, frac, dpi = self.path, self.page, self._frac(), self.quality.currentData()
+        fn = lambda: [imaging.save_pdf_snip(path, page, frac, dpi)]
+        if self.submit is not None:
+            self.submit(f"tool:{self.tool_name}", [str(path)], fn, tr("Saving snip…"))
+        else:
+            self.notify(f"tool:{self.tool_name}", [str(path)], fn())
+        self.view.reset_sel()

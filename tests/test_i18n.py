@@ -57,3 +57,21 @@ def test_hub_flips_rings_only_once():
     assert m.ring_idx == 1
     m._set_hover(-2)           # Windows keeps sending drag-move events on the hub
     assert not m.hub_timer.isActive()
+
+
+def test_pdf_snip(tmp_path: Path):
+    import fitz
+    from dragshift import imaging
+    p = tmp_path / "doc.pdf"
+    doc = fitz.open()
+    for rot in (0, 90):
+        pg = doc.new_page(width=600, height=800)
+        pg.draw_rect(fitz.Rect(0, 0, 300, 400), color=(1, 0, 0), fill=(1, 0, 0))
+        pg.set_rotation(rot)
+    doc.save(p)
+    im = imaging.snip_pdf(p, 0, (0.1, 0.1, 0.4, 0.4), 144)       # inside the red box
+    assert im.size == (360, 480) and im.getpixel((10, 10))[1] < 50
+    im = imaging.snip_pdf(p, 1, (0.6, 0.1, 0.9, 0.4), 72)         # rotated page: red is top-right
+    assert im.getpixel((im.width // 2, im.height // 2))[1] < 50
+    out = imaging.save_pdf_snip(p, 1, (0, 0, 1, 0.5), 72)
+    assert out.name == "doc page 2 snip.png" and out.exists()

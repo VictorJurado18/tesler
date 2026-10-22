@@ -545,3 +545,39 @@ def pil_to_png_bytes(im: Image.Image) -> bytes:
     buf = io.BytesIO()
     im.save(buf, "PNG")
     return buf.getvalue()
+
+
+# ---------------------------------------------------------------- PDF snip (area → image)
+def pdf_page_count(src: str | Path) -> int:
+    with open_pdf(src) as doc:
+        return doc.page_count
+
+
+def render_pdf_page(src: str | Path, page: int, dpi: float) -> Image.Image:
+    """The page as shown on screen (rotation applied)."""
+    with open_pdf(src) as doc:
+        pix = doc[page].get_pixmap(dpi=dpi, alpha=False)
+        return Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+
+
+def snip_pdf(src: str | Path, page: int, frac: tuple[float, float, float, float], dpi: int = 300) -> Image.Image:
+    """Render only an area of a page, re-rasterised from the PDF at `dpi` (sharp text, not an
+    upscaled preview). `frac` = (x0, y0, x1, y1) as fractions 0..1 of the page as displayed."""
+    x0, y0, x1, y1 = (min(max(v, 0.0), 1.0) for v in frac)
+    if x1 - x0 <= 0 or y1 - y0 <= 0:
+        raise ValueError("empty selection")
+    with open_pdf(src) as doc:
+        pg = doc[page]
+        r = pg.rect                                # displayed (rotated) page size
+        shown = fitz.Rect(r.x0 + x0 * r.width, r.y0 + y0 * r.height,
+                          r.x0 + x1 * r.width, r.y0 + y1 * r.height)
+        clip = shown                               # get_pixmap clips in displayed coordinates
+        pix = pg.get_pixmap(dpi=dpi, clip=clip, alpha=False)
+        return Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+
+
+def save_pdf_snip(src: str | Path, page: int, frac, dpi: int = 300) -> Path:
+    im = snip_pdf(src, page, frac, dpi)
+    out = sibling(src, tr("page {n} snip", n=page + 1), ".png")
+    save_image(im, out, "PNG")
+    return out

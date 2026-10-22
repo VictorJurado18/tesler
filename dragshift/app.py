@@ -30,9 +30,12 @@ from .handoff import ipc_name
 from .i18n import plural, tr
 IPC_NAME = ipc_name()
 
-GLYPHS = {"Compress": "⇲", "Metadata": "ⓘ", "Redact": "▮", "Crop": "⌗", "Edit": "☼",
-          "Annotate": "✎", "Add BG": "▣", "Resize": "⤢", "Split": "✂", "Rotate": "⟳",
-          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚", "Text": "¶", "Unlock": "⚷", "Organize": "▦", "OCR": "⌕", "Cutout": "✂", "Rename": "✎", "Sign": "✍", "Peek": "◉", "Combine": "⊕", "Collage": "⊞"}
+GLYPHS = {  # icon names (see icons.py)
+    "Compress": "compress", "Metadata": "info", "Redact": "redact", "Crop": "crop", "Edit": "adjust",
+    "Annotate": "annotate", "Add BG": "background", "Resize": "resize", "Split": "split", "Rotate": "rotate",
+    "Merge": "merge", "Protect": "lock", "Extract": "images", "Snip": "snip", "Text": "text", "Unlock": "unlock",
+    "Organize": "organize", "OCR": "ocr", "Cutout": "cutout", "Rename": "rename", "Sign": "sign",
+    "Peek": "peek", "Combine": "stack", "Collage": "collage"}
 
 HINTS = {
     "Compress": "Shrink file size", "Metadata": "View · remove GPS", "Redact": "Hide private info",
@@ -69,6 +72,7 @@ class _Sig(QObject):
 
 class _Progress(QObject):
     changed = Signal(str, str)
+    fraction = Signal(float)
 
 
 class Job(QRunnable):
@@ -173,6 +177,11 @@ class DragShiftApp(QObject):
         self.server.listen(IPC_NAME)
         self.server.newConnection.connect(self._ipc)
 
+        try:   # Windows switched light/dark while we run: new windows pick it up
+            from . import theme
+            QGuiApplication.styleHints().colorSchemeChanged.connect(lambda *_: theme.refresh())
+        except Exception:
+            pass
         self.tray = QSystemTrayIcon(make_tray_icon(), self)
         self.tray.setToolTip(tr("{app} — press {key} while dragging a file", app=APP_NAME, key=self.trigger_label()))
         m = QMenu()
@@ -408,13 +417,15 @@ class DragShiftApp(QObject):
         card.working(verb, Path(paths[0]).name if len(paths) == 1 else tr("{n} files", n=len(paths)))
         relay = _Progress()
         relay.changed.connect(lambda t, d: card.working(t, d))
+        relay.fraction.connect(card.set_progress)
         action = "tool:Compress" if kind == "tool" else f"convert:{name}"
 
         def work():
             outs = []
             for i, p in enumerate(paths):
-                prefix = f"{i + 1}/{len(paths)} · " if len(paths) > 1 else ""
-                cb = lambda f, prefix=prefix, p=p: relay.changed.emit(verb, f"{prefix}{f * 100:.0f}% · {Path(p).name}")
+                prefix = f"{i + 1}/{len(paths)}  " if len(paths) > 1 else ""
+                relay.changed.emit(verb, f"{prefix}{Path(p).name}")
+                cb = lambda f, i=i: relay.fraction.emit((i + f) / len(paths))
                 if kind == "tool":
                     outs += media.compress_video(p, cb)
                 else:
@@ -434,13 +445,13 @@ class DragShiftApp(QObject):
         card.working(tr("Removing background…"), names)
         relay = _Progress()
         relay.changed.connect(lambda t, d: card.working(t, d))
+        relay.fraction.connect(card.set_progress)
 
         def work():
             if not bgremove.model_ready():
                 relay.changed.emit(tr("Downloading the AI model (once, ~170 MB)…"), "")
-                bgremove.download_model(lambda done, total: relay.changed.emit(
-                    tr("Downloading the AI model (once, ~170 MB)…"),
-                    f"{done * 100 // total}%" if total else human_size(done)))
+                bgremove.download_model(lambda done, total: relay.fraction.emit(done / total) if total else None)
+                relay.fraction.emit(-1.0)
             outs = []
             for i, p in enumerate(paths):
                 relay.changed.emit(tr("Removing background…"),

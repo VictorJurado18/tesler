@@ -89,7 +89,7 @@ PT: dict[str, str] = {
     "Images · PDF · Word · Text": "Imagens · PDF · Word · Texto",
     # tool names
     "Compress": "Comprimir", "Metadata": "Metadados", "Redact": "Ocultar", "Crop": "Cortar",
-    "Edit": "Editar", "Annotate": "Anotar", "Add BG": "Fundo", "Resize": "Redimensionar",
+    "Edit": "Ajustar", "Annotate": "Anotar", "Add BG": "Fundo", "Resize": "Redimensionar",
     "Split": "Dividir", "Rotate": "Girar", "Merge": "Mesclar", "Protect": "Proteger",
     "Extract": "Extrair",
     # tool hints
@@ -109,7 +109,7 @@ PT: dict[str, str] = {
 
     # ---------------------------------------------------------------- notifications
     "Open": "Abrir",
-    "Show in folder": "Ver na pasta",
+    "Show in folder": "Mostrar na pasta",
     "Undo": "Desfazer",
     "Undone": "Desfeito",
     "Moved {n} file to the {bin}": "{n} arquivo movido para a {bin}",
@@ -314,7 +314,7 @@ PT: dict[str, str] = {
     "Quality": "Qualidade",
     "Target size": "Tamanho-alvo",
     "Make each file under": "Deixar cada arquivo abaixo de",
-    "Original size": "Tamanho original",
+    "Original size": "Manter o original",
     "Max {n} px": "Máx. {n} px",
     "Convert to WebP (usually the smallest)": "Converter para WebP (geralmente o menor)",
     "Compress {n} files": "Comprimir {n} arquivos",
@@ -561,6 +561,21 @@ PT: dict[str, str] = {
     "Images combined": "Imagens juntadas",
     "No images.": "Nenhuma imagem.",
 
+    # redesign
+    "Minimize": "Minimizar",
+    "flips": "troca",
+    "Theme": "Tema", "Same as Windows": "Igual ao Windows", "Dark": "Escuro", "Light": "Claro",
+    "Arrow": "Seta", "Box": "Caixa", "Circle": "Círculo", "Pen": "Caneta", "Marker": "Marca-texto",
+    "Text tool": "Texto", "Step": "Passo", "Flip": "Espelhar", "Delete": "Apagar", "Draw": "Desenhar",
+    "From photo": "De uma foto", "Reverse order": "Inverter ordem",
+    "Saved next to the original": "Salvo ao lado do original",
+    "Saved in a “DragShift” subfolder": "Salvo na subpasta “DragShift”",
+    "Compress image": "Comprimir imagem",
+    "Compress images": "Comprimir imagens",
+    "By quality": "Por qualidade",
+    "Maximum size": "Tamanho máximo",
+    "Image size": "Tamanho da imagem",
+
     # unlock
     "Unlock": "Tirar senha",
     "Unlocked": "Sem senha",
@@ -576,7 +591,7 @@ PT: dict[str, str] = {
     "no password": "sem senha",
 
     # copy text / OCR
-    "Text": "Texto",
+    "Text": "Copiar texto",
     "Copy the text (OCR)": "Copiar o texto (OCR)",
     "Copy text": "Copiar texto",
     "Copy the text inside the selection (Ctrl+Shift+C)": "Copiar o texto da seleção (Ctrl+Shift+C)",

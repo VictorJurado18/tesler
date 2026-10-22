@@ -99,9 +99,11 @@ def sibling(src: str | Path, suffix_label: str = "", ext: str | None = None) -> 
 def human_size(n: int | float) -> str:
     for unit in ("B", "KB", "MB", "GB"):
         if n < 1024 or unit == "GB":
-            return f"{n:.0f} {unit}" if unit == "B" else f"{n:.1f} {unit}"
+            text = f"{n:.0f} {unit}" if unit == "B" else f"{n:.1f} {unit}"
+            break
         n /= 1024
-    return f"{n:.1f} GB"
+    from . import i18n
+    return text.replace(".", ",") if i18n.LANG == "pt" else text   # "4,5 MB" in Portuguese
 
 
 def file_size(path: str | Path) -> int:

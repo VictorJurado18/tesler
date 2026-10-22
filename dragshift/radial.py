@@ -1,8 +1,8 @@
 """The radial drop menu that pops up under the cursor while you Shift+drag a file.
 
-Rendering: the moment the menu opens we snapshot the screen behind it; a worker thread then
-refracts that snapshot through the menu's shape (see liquid.py). Until that's ready (~60 ms)
-a cheap frosted version is drawn, so the menu still appears instantly."""
+Look: frosted neutral glass (the screen behind it, captured the moment the menu opens, blurred
+and toned to the Windows theme), slices with constant gaps, one accent: the slice under the
+cursor. Below the ring a small switch shows which list is up and that Shift flips it."""
 from __future__ import annotations
 
 import math
@@ -14,10 +14,10 @@ from typing import Callable
 from PySide6.QtCore import (QEasingCurve, QObject, QPoint, QPointF, QRectF, QRunnable, Qt,
                             QThreadPool, QTimer, QVariantAnimation, Signal)
 from PySide6.QtGui import (QColor, QCursor, QFont, QFontMetrics, QGuiApplication, QImage, QPainter,
-                           QPainterPath, QPen, QPixmap, QRadialGradient)
+                           QPainterPath, QPen, QPixmap)
 from PySide6.QtWidgets import QWidget
 
-from . import glass
+from . import glass, icons, theme
 from .util import resolve_shortcuts, ui_family
 from .i18n import tr
 
@@ -31,11 +31,13 @@ class Item:
     hint: str = ""
 
 
-SIZE = 400          # window size (room for shadow + hover pop)
-R_OUT = 158         # outer radius of petals
-R_IN = 60           # inner radius of petals
-R_HUB = 50          # hub radius
-GAP_DEG = 3.2
+SIZE = 460          # window size (room for shadow, hover pop and the Converter/Tools switch)
+CX, CY = 230, 208   # ring centre = where the cursor is
+R_OUT = 176         # outer radius of slices
+R_IN = 66           # inner radius of slices
+R_HUB = 58          # hub radius
+GAP_PX = 3.0        # half the gap between slices, constant in pixels (not degrees)
+GAP_DEG = 0.0       # (slices are cut in slice_path, so hit-testing has no dead angles)
 CORNER = 10
 
 
@@ -47,6 +49,20 @@ def sector_path(c: QPointF, r0: float, r1: float, a0: float, a1: float) -> QPain
     path.arcMoveTo(outer, a0)
     path.arcTo(outer, a0, a1 - a0)
     path.arcTo(inner, a1, -(a1 - a0))
+    path.closeSubpath()
+    return path
+
+
+def slice_path(c: QPointF, r0: float, r1: float, a0: float, a1: float, gap: float = GAP_PX) -> QPainterPath:
+    """A slice with a gap of constant width to its neighbours (the gap is `gap` px on each side,
+    so it doesn't widen towards the outside like a fixed angle would)."""
+    g0, g1 = math.degrees(gap / r0), math.degrees(gap / r1)
+    path = QPainterPath()
+    outer = QRectF(c.x() - r1, c.y() - r1, 2 * r1, 2 * r1)
+    inner = QRectF(c.x() - r0, c.y() - r0, 2 * r0, 2 * r0)
+    path.arcMoveTo(outer, a0 + g1)
+    path.arcTo(outer, a0 + g1, (a1 - a0) - 2 * g1)
+    path.arcTo(inner, a1 - g0, -((a1 - a0) - 2 * g0))
     path.closeSubpath()
     return path
 
@@ -111,7 +127,7 @@ class RadialMenu(QWidget):
         self.ring_names: list[str] = []
         self.ring_idx = 0
         self.hover = -1          # petal index, -2 = hub, -1 = none
-        self.cursor_pos = QPointF(SIZE / 2, SIZE / 2)
+        self.cursor_pos = QPointF(CX, CY)
         self.hub_text = ""
         self.backdrop: QPixmap | None = None     # blurred, for the instant fallback
         self._raw_backdrop = None                 # PIL image for the liquid renderer
@@ -138,7 +154,7 @@ class RadialMenu(QWidget):
     # ------------------------------------------------------------ show / hide
     def popup(self, pos: QPoint | None = None, paths: list[str] | None = None):
         pos = pos or QCursor.pos()
-        tl = pos - QPoint(SIZE // 2, SIZE // 2)
+        tl = pos - QPoint(CX, CY)
         scr = QGuiApplication.screenAt(pos) or QGuiApplication.primaryScreen()
         g = scr.geometry()
         tl.setX(min(max(tl.x(), g.left()), g.right() - SIZE))
@@ -229,6 +245,7 @@ class RadialMenu(QWidget):
         super().hideEvent(e)
 
     def _render(self, n: int):
+        return  # the redesigned ring is frosted directly from the blurred capture (no refraction pass)
         if n <= 0 or n in self.liquid or self._raw_backdrop is None:
             return
         self.liquid[n] = QImage()  # placeholder: in flight
@@ -260,7 +277,7 @@ class RadialMenu(QWidget):
         """No compositor (XFCE etc.): cut the window to the menu's outline."""
         if not glass.no_compositor():
             return
-        c = QPointF(SIZE / 2, SIZE / 2)
+        c = QPointF(CX, CY)
         path = QPainterPath()
         path.addEllipse(c, R_HUB + 2, R_HUB + 2)
         n = len(self.items) or 0
@@ -329,7 +346,7 @@ class RadialMenu(QWidget):
         return angles(n, i)
 
     def hit(self, pos: QPointF) -> int:
-        c = QPointF(SIZE / 2, SIZE / 2)
+        c = QPointF(CX, CY)
         dx, dy = pos.x() - c.x(), c.y() - pos.y()
         d = math.hypot(dx, dy)
         if d <= R_HUB + 4:
@@ -426,176 +443,223 @@ class RadialMenu(QWidget):
             self._set_hover(-1)
 
     # ------------------------------------------------------------ painting
-    def _text_colors(self) -> tuple[QColor, QColor, QColor]:
-        if self.is_light:
-            return QColor(28, 20, 44), QColor(28, 20, 44, 170), QColor(255, 255, 255, 120)
-        return QColor(255, 255, 255), QColor(255, 255, 255, 190), QColor(0, 0, 0, 110)
-
+    # ------------------------------------------------------------ painting
     def paintEvent(self, e):
+        t = theme.current()
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         p.setRenderHint(QPainter.TextAntialiasing)
         p.setRenderHint(QPainter.SmoothPixmapTransform)
-        c = QPointF(SIZE / 2, SIZE / 2)
-        t = self._t
-        p.setOpacity(min(1.0, max(0.0, t * 1.5)))
+        c = QPointF(CX, CY)
+        k = self._t
+        p.setOpacity(min(1.0, max(0.0, k * 1.6)))
         p.translate(c)
-        s = 0.80 + 0.20 * t
-        p.scale(s, s)
+        sc = 0.86 + 0.14 * k
+        p.scale(sc, sc)
         p.translate(-c)
 
         items = self.items
         n = len(items)
-        img = self.liquid.get(n) if n else (self.liquid.get(4) or self.liquid.get(7))
-        have_liquid = img is not None and not img.isNull()
-
-        if have_liquid:
-            p.drawImage(0, 0, img)
-        else:
-            self._paint_fallback(p, c, n)
-
-        fg, fg_dim, shadow_col = self._text_colors()
-        rot = (1 - self._swap) * -22
+        self._paint_disc(p, c, t)
+        rot = (1 - self._swap) * -18
         for i, it in enumerate(items):
             a0, a1 = angles(n, i)
             h = self.spring[i] if i < len(self.spring) else 0.0
-            if h > 0.001:
-                self._paint_hover(p, c, a0, a1, h, img if have_liquid else None)
-            self._petal_label(p, c, it, (a0 + a1) / 2 + rot, (R_IN + R_OUT) / 2 + h * 4, h,
-                              fg, shadow_col)
-        if not n and self.paths:
-            self._paint_unsupported(p, c, fg, fg_dim, shadow_col)
-
-        self._paint_hub(p, c, fg, fg_dim, shadow_col)
-
-    def _paint_unsupported(self, p: QPainter, c: QPointF, fg: QColor, fg_dim: QColor,
-                           shadow_col: QColor):
-        """Nothing to offer: say so in the top band, clear of the cursor and the drag image."""
-        ext = Path(self.paths[0]).suffix.lower() or tr("this file")
-        f = QFont(ui_family(True))
-        f.setPixelSize(13)
-        f.setBold(True)
-        p.setFont(f)
-        r_mid = (R_IN + R_OUT) / 2
-        self._text(p, QRectF(c.x() - R_OUT, c.y() - r_mid - 18, 2 * R_OUT, 18),
-                   tr("Can't convert {ext}", ext=ext), fg, shadow_col)
-        f.setPixelSize(10)
-        f.setBold(False)
-        p.setFont(f)
-        self._text(p, QRectF(c.x() - R_OUT, c.y() - r_mid + 1, 2 * R_OUT, 16),
-                   tr("Images · PDF · Office · Video · Audio"), fg_dim, None)
-
-    def _paint_fallback(self, p: QPainter, c: QPointF, n: int):
-        hub = QPainterPath()
-        hub.addEllipse(c, R_HUB, R_HUB)
-        glass.paint_glass(p, hub, self.backdrop, QPointF(0, 0), tint=QColor(22, 18, 34, 80),
-                          rainbow_alpha=150, highlight=1.3)
-        for i in range(n):
+            self._paint_slice(p, c, a0 + rot, a1 + rot, h, t)
+        for i, it in enumerate(items):
             a0, a1 = angles(n, i)
-            glass.paint_glass(p, sector_path(c, R_IN, R_OUT, a0, a1), self.backdrop, QPointF(0, 0),
-                              tint=QColor(22, 18, 34, 62), rainbow_alpha=140)
+            h = self.spring[i] if i < len(self.spring) else 0.0
+            self._petal_label(p, c, it, (a0 + a1) / 2 + rot, (R_IN + R_OUT) / 2 + 4, h, t)
+        if not n and self.paths:
+            self._paint_unsupported(p, c, t)
+        self._paint_hub(p, c, t)
+        if len(self.ring_names) > 1:
+            self._paint_switch(p, t)
 
-    def _paint_hover(self, p: QPainter, c: QPointF, a0: float, a1: float, h: float, img: QImage | None):
-        mid = math.radians((a0 + a1) / 2)
-        r_mid = (R_IN + R_OUT) / 2
-        pc = QPointF(c.x() + r_mid * math.cos(mid), c.y() - r_mid * math.sin(mid))
-        k = 1 + 0.07 * h                     # elastic "pop" towards the cursor
-        push = 6 * h
-        off = QPointF(push * math.cos(mid), -push * math.sin(mid))
-        path = sector_path(c, R_IN - 1, R_OUT + 1, a0, a1)
+    def _paint_disc(self, p: QPainter, c: QPointF, t):
+        """Frosted, neutral glass: the blurred screen behind, toned down to the theme."""
+        # soft shadow (the window is translucent, so we draw it ourselves)
+        for i, a in enumerate((26, 18, 12, 7, 3)):
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor(0, 0, 0, a if t.dark else a // 2))
+            p.drawEllipse(QPointF(c.x(), c.y() + 10), R_OUT + 4 + i * 4, R_OUT + 4 + i * 4)
+        disc = QPainterPath()
+        disc.addEllipse(c, R_OUT + 3, R_OUT + 3)
         p.save()
-        p.translate(pc + off)
-        p.scale(k, k)
-        p.translate(-pc)
-        # only the glass itself moves: the slice's own refraction, enlarged — no added light
-        if img is not None:
-            p.save()
-            p.setClipPath(path)
-            p.drawImage(0, 0, img)
-            p.restore()
+        p.setClipPath(disc)
+        if self.backdrop is not None and not self.backdrop.isNull():
+            p.drawPixmap(0, 0, self.backdrop)
+            p.fillPath(disc, theme.qcolor(t.ring))
         else:
-            glass.paint_glass(p, path, self.backdrop, QPointF(0, 0), tint=QColor(22, 18, 34, 62),
-                              rainbow_alpha=140)
+            solid = theme.qcolor(t.ring)
+            solid.setAlphaF(0.96)
+            p.fillPath(disc, solid)
         p.restore()
-
-    def _paint_hub(self, p: QPainter, c: QPointF, fg: QColor, fg_dim: QColor, shadow_col: QColor):
-        p.setPen(glass.iridescent_pen(c, 1.2, 150, angle=60))
+        p.setPen(QPen(theme.qcolor(t.ring_stroke), 1))
         p.setBrush(Qt.NoBrush)
-        p.drawEllipse(c, R_HUB - 0.5, R_HUB - 0.5)
+        p.drawEllipse(c, R_OUT + 3, R_OUT + 3)
 
-        items = self.items
-        hov = items[self.hover] if 0 <= self.hover < len(items) else None
-        if hov is not None:
-            top, sub = tr(hov.label) if not hov.glyph else tr(hov.label).title(), tr(hov.hint or "")
-        else:
-            ring_name = self.ring_names[self.ring_idx] if self.ring_names else ""
-            top = self.hub_text
-            if len(self.ring_names) > 1:
-                other = self.ring_names[(self.ring_idx + 1) % len(self.ring_names)]
-                sub = f"⇧ {tr(other).upper()}"
-            else:
-                sub = tr(ring_name).upper()
-        f = QFont(ui_family(True))
-        f.setPixelSize(14)
-        f.setBold(True)
-        p.setFont(f)
-        rect_top = QRectF(c.x() - R_HUB + 4, c.y() - 21, 2 * R_HUB - 8, 20)
-        self._text(p, rect_top, top, fg, shadow_col)
-        f.setPixelSize(10)
-        f.setBold(False)
-        p.setFont(f)
-        self._text(p, QRectF(c.x() - R_HUB + 6, c.y() + 2, 2 * R_HUB - 12, 28), sub, fg_dim, None,
-                   Qt.AlignHCenter | Qt.AlignTop | Qt.TextWordWrap)
-
-    @staticmethod
-    def _text(p: QPainter, r: QRectF, text: str, col: QColor, shadow: QColor | None,
-              flags=Qt.AlignCenter):
-        if shadow is not None:
-            p.setPen(shadow)
-            p.drawText(r.translated(0, 1), flags, text)
-        p.setPen(col)
-        p.drawText(r, flags, text)
-
-    def _petal_label(self, p: QPainter, c: QPointF, it: Item, ang: float, r: float,
-                     h: float, fg: QColor, shadow_col: QColor):
-        rad = math.radians(ang)
+    def _paint_slice(self, p: QPainter, c: QPointF, a0: float, a1: float, h: float, t):
+        mid = math.radians((a0 + a1) / 2)
         push = 6 * h
-        pt = QPointF(c.x() + (r + push) * math.cos(rad), c.y() - (r + push) * math.sin(rad))
+        path = slice_path(c, R_IN, R_OUT, a0, a1).translated(push * math.cos(mid), -push * math.sin(mid))
+        p.setPen(QPen(theme.qcolor(t.ring_stroke), 1))
+        p.setBrush(theme.qcolor(t.ring_slice))
+        p.drawPath(path)
+        if h > 0.001:
+            acc = theme.qcolor(t.accent)
+            acc.setAlphaF(min(1.0, h))
+            p.setPen(Qt.NoPen)
+            p.setBrush(acc)
+            p.drawPath(path)
+
+    def _petal_label(self, p: QPainter, c: QPointF, it: Item, ang: float, r: float, h: float, t):
+        rad = math.radians(ang)
+        r += 6 * h
+        pt = QPointF(c.x() + r * math.cos(rad), c.y() - r * math.sin(rad))
+        base = theme.qcolor(t.text)
+        base.setAlphaF(0.88)
+        on = theme.qcolor(t.on_accent)
+        col = QColor(
+            int(base.red() + (on.red() - base.red()) * h), int(base.green() + (on.green() - base.green()) * h),
+            int(base.blue() + (on.blue() - base.blue()) * h), int(base.alpha() + (255 - base.alpha()) * h))
         p.save()
-        p.setOpacity(p.opacity() * (0.25 + 0.75 * self._swap))
-        col = QColor(255, 255, 255) if h > 0.5 else fg   # hovered petal is warm-lit: white text
-        f = QFont(ui_family(True))
-        if it.glyph:
-            f.setPixelSize(int(18 + 3 * h))
-            p.setFont(f)
-            self._text(p, QRectF(pt.x() - 30, pt.y() - 24, 60, 24), it.glyph, col, shadow_col,
-                       Qt.AlignHCenter | Qt.AlignBottom)
-            f.setPixelSize(10)
-            f.setBold(True)
-            f.setLetterSpacing(QFont.AbsoluteSpacing, 0.7)
-            label = tr(it.label).upper()
-            # fit the petal's real width (narrower when the ring has many slices): wrap a
-            # two-word label onto two lines, then shrink the font (e.g. "REDIMENSIONAR")
-            n = max(1, len(self.items))
-            max_w = min(80.0, 2 * (r + 8) * math.sin(math.pi / n) * 0.9)
+        p.setOpacity(p.opacity() * (0.2 + 0.8 * self._swap))
+        n = max(1, len(self.items))
+        max_w = min(100.0, 2 * r * math.sin(math.pi / n) + 4)   # the slice's width at the label
+        if it.glyph in icons.PATHS:
+            icons.draw(p, it.glyph, QRectF(pt.x() - 10, pt.y() - 22, 20, 20), col)
+            f = QFont(ui_family(False))
+            f.setPixelSize(12)
+            f.setWeight(QFont.DemiBold if h > 0.5 else QFont.Medium)
+            label = tr(it.label)
             lines = [label]
             if QFontMetrics(f).horizontalAdvance(label) > max_w and " " in label:
                 lines = label.split(" ", 1)
-            widest = lambda: max(QFontMetrics(f).horizontalAdvance(ln) for ln in lines)
-            if widest() > max_w:
-                f.setLetterSpacing(QFont.AbsoluteSpacing, 0.1)
-                px = 10
-                while px > 7 and widest() > max_w:
-                    px -= 1
-                    f.setPixelSize(px)
+            px = 12
+            while px > 9 and max(QFontMetrics(f).horizontalAdvance(ln) for ln in lines) > max_w:
+                px -= 0.5
+                f.setPixelSize(int(px)) if float(px).is_integer() else f.setPointSizeF(px * 0.75)
             p.setFont(f)
+            p.setPen(col)
             lh = QFontMetrics(f).height()
             for k, ln in enumerate(lines):
-                self._text(p, QRectF(pt.x() - 45, pt.y() + 1 + k * (lh - 1), 90, 16), ln, col, shadow_col)
-        else:
-            f.setPixelSize(int(14 + 2 * h))
-            f.setBold(True)
-            f.setLetterSpacing(QFont.AbsoluteSpacing, 0.9)
+                p.drawText(QRectF(pt.x() - 50, pt.y() + 3 + k * (lh - 2), 100, lh), Qt.AlignHCenter | Qt.AlignTop, ln)
+        else:   # a format (PNG, PDF…): the name is the icon
+            f = QFont(ui_family(True))
+            f.setPixelSize(16)
+            f.setWeight(QFont.DemiBold)
             p.setFont(f)
-            self._text(p, QRectF(pt.x() - 42, pt.y() - 12, 84, 24), tr(it.label), col, shadow_col)
+            p.setPen(col)
+            p.drawText(QRectF(pt.x() - 50, pt.y() - 11, 100, 22), Qt.AlignCenter, tr(it.label))
+            # (its description shows in the hub while hovered: no truncated text in the slice)
         p.restore()
+
+    def _paint_hub(self, p: QPainter, c: QPointF, t):
+        p.setPen(QPen(theme.qcolor(t.ring_stroke), 1))
+        p.setBrush(theme.qcolor(t.ring_hub))
+        p.drawEllipse(c, R_HUB, R_HUB)
+        items = self.items
+        hov = items[self.hover] if 0 <= self.hover < len(items) else None
+        if hov is not None:
+            top, sub = tr(hov.label), tr(hov.hint or "")
+        elif len(self.paths) == 1:
+            top, sub = Path(self.paths[0]).name, self.hub_text
+        else:
+            top, sub = self.hub_text, ""
+        w = 2 * R_HUB - 18
+        f = QFont(ui_family(True))
+        f.setPixelSize(14)
+        f.setWeight(QFont.DemiBold)
+        fm = QFontMetrics(f)
+        top = fm.elidedText(top, Qt.ElideMiddle, int(w))
+        f2 = QFont(ui_family(False))
+        f2.setPixelSize(11)
+        fm2 = QFontMetrics(f2)
+        sub_rect = fm2.boundingRect(QRectF(0, 0, w, 60).toRect(), Qt.AlignHCenter | Qt.TextWordWrap, sub)
+        sub_h = min(sub_rect.height(), fm2.lineSpacing() * 2) if sub else 0
+        total = fm.height() + (2 + sub_h if sub else 0)
+        y = c.y() - total / 2
+        p.setFont(f)
+        p.setPen(theme.qcolor(t.text))
+        p.drawText(QRectF(c.x() - w / 2, y, w, fm.height()), Qt.AlignCenter, top)
+        if sub:
+            p.setFont(f2)
+            p.setPen(theme.qcolor(t.text2))
+            p.drawText(QRectF(c.x() - w / 2, y + fm.height() + 2, w, sub_h),
+                       Qt.AlignHCenter | Qt.AlignTop | Qt.TextWordWrap, sub)
+
+    def _paint_switch(self, p: QPainter, t):
+        """[Converter | Ferramentas]  Shift troca — which ring is showing, and how to flip it."""
+        p.save()
+        p.resetTransform()
+        p.setOpacity(min(1.0, max(0.0, self._t * 1.6)))
+        f = QFont(ui_family(False))
+        f.setPixelSize(12)
+        fb = QFont(f)
+        fb.setWeight(QFont.DemiBold)
+        fk = QFont(f)
+        fk.setPixelSize(11)
+        names = [tr(n) for n in self.ring_names]
+        seg_w = [max(QFontMetrics(fb).horizontalAdvance(nm), QFontMetrics(f).horizontalAdvance(nm)) + 24 for nm in names]
+        key, verb = "Shift", tr("flips")
+        key_w = QFontMetrics(fk).horizontalAdvance(key) + 14
+        verb_w = QFontMetrics(f).horizontalAdvance(verb)
+        h = 32
+        inner_w = sum(seg_w) + 2 * (len(names) - 1) + 4
+        total = 6 + inner_w + 12 + key_w + 6 + verb_w + 10
+        x0, y0 = CX - total / 2, CY + R_OUT + 18
+        box = QRectF(x0, y0, total, h)
+        bg = theme.qcolor(t.card)
+        bg.setAlphaF(0.94)
+        p.setPen(QPen(theme.qcolor(t.ring_stroke), 1))
+        p.setBrush(bg)
+        p.drawRoundedRect(box, 8, 8)
+        tray = QRectF(x0 + 6, y0 + 4, inner_w, h - 8)
+        p.setPen(Qt.NoPen)
+        p.setBrush(theme.qcolor(t.control))
+        p.drawRoundedRect(tray, 6, 6)
+        x = tray.left() + 2
+        for i, (nm, w) in enumerate(zip(names, seg_w)):
+            r = QRectF(x, tray.top() + 2, w, tray.height() - 4)
+            if i == self.ring_idx:
+                p.setBrush(theme.qcolor(t.selected))
+                p.drawRoundedRect(r, 4, 4)
+                p.setFont(fb)
+                p.setPen(theme.qcolor(t.text))
+            else:
+                p.setFont(f)
+                p.setPen(theme.qcolor(t.text2))
+            p.drawText(r, Qt.AlignCenter, nm)
+            p.setPen(Qt.NoPen)
+            x += w + 2
+        kx = tray.right() + 12
+        kr = QRectF(kx, y0 + 7, key_w, h - 14)
+        p.setPen(QPen(theme.qcolor(t.stroke_strong), 1))
+        p.setBrush(Qt.NoBrush)
+        p.drawRoundedRect(kr, 4, 4)
+        p.setFont(fk)
+        p.setPen(theme.qcolor(t.text))
+        p.drawText(kr, Qt.AlignCenter, key)
+        p.setFont(f)
+        p.setPen(theme.qcolor(t.text2))
+        p.drawText(QRectF(kr.right() + 6, y0, verb_w + 4, h), Qt.AlignVCenter | Qt.AlignLeft, verb)
+        p.restore()
+
+    def _paint_unsupported(self, p: QPainter, c: QPointF, t):
+        """Nothing to offer: say so across the ring, clear of the cursor and the drag image."""
+        ext = Path(self.paths[0]).suffix.lower() or tr("this file")
+        f = QFont(ui_family(True))
+        f.setPixelSize(14)
+        f.setWeight(QFont.DemiBold)
+        p.setFont(f)
+        p.setPen(theme.qcolor(t.text))
+        r_mid = (R_IN + R_OUT) / 2
+        p.drawText(QRectF(c.x() - R_OUT, c.y() - r_mid - 20, 2 * R_OUT, 20), Qt.AlignCenter,
+                   tr("Can't convert {ext}", ext=ext))
+        f.setPixelSize(11)
+        f.setWeight(QFont.Normal)
+        p.setFont(f)
+        p.setPen(theme.qcolor(t.text2))
+        p.drawText(QRectF(c.x() - R_OUT, c.y() - r_mid + 2, 2 * R_OUT, 16), Qt.AlignCenter,
+                   tr("Images · PDF · Office · Video · Audio"))

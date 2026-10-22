@@ -115,72 +115,133 @@ def paint_glass(p: QPainter, path: QPainterPath, backdrop: QPixmap | None = None
 
 
 # ---------------------------------------------------------------- Qt stylesheet
-_QSS = f"""
-* {{ color: {TEXT}; font-family: "@FONT@", sans-serif; font-size: 10pt; }}
+def _build_qss() -> str:
+    """Windows 11 look on top of theme.current(): neutral surfaces, one accent, 4 px radii."""
+    from . import icons, theme
+    t = theme.current()
+    acc = theme.qcolor(t.accent)
+    acc_hover = (acc.darker(108) if not t.dark else acc.lighter(108)).name()
+    acc_press = (acc.darker(116) if not t.dark else acc.darker(108)).name()
+    edge = "rgba(255,255,255,0.08)" if t.dark else "rgba(0,0,0,0.10)"
+    check = icons.write_svg_file("check", t.on_accent)
+    chevron = icons.write_svg_file("chevron-down", t.text2 if t.text2.startswith("#") else ("#BFBFBF" if t.dark else "#5C5C5C"))
+    warn = "#FCE100" if t.dark else "#9D5D00"
+    return f"""
+* {{ color: {t.text}; font-family: "@FONT@", sans-serif; font-size: 10pt; }}
 QWidget#glassRoot {{ background: transparent; }}
-QLabel#title {{ font-size: 11pt; font-weight: 600; }}
-QLabel#dim, QLabel.dim {{ color: {TEXT_DIM}; font-size: 9pt; }}
-QLabel#section {{ color: {TEXT_DIM}; font-size: 8.5pt; font-weight: 600; letter-spacing: 1px; }}
+QLabel {{ background: transparent; }}
+QLabel#title {{ font-size: 9pt; color: {t.text2}; }}
+QLabel#heading {{ font-family: "@DISPLAY@"; font-size: 15pt; font-weight: 600; }}
+QLabel#dim, QLabel.dim {{ color: {t.text2}; font-size: 9pt; }}
+QLabel#section {{ color: {t.text2}; font-size: 9pt; font-weight: 600; }}
+QLabel#big {{ font-family: "@DISPLAY@"; font-size: 16pt; font-weight: 600; }}
+QLabel#good {{ color: {t.accent_text}; font-weight: 600; }}
+QLabel#warn {{ color: {warn}; font-weight: 600; }}
+QLabel#error {{ color: {t.danger_text}; }}
+
 QPushButton {{
-  background: rgba(255,255,255,0.13); border: 1px solid rgba(255,255,255,0.30);
-  border-top-color: rgba(255,255,255,0.55); border-bottom-color: rgba(255,255,255,0.16);
-  border-radius: 15px; padding: 6px 15px; min-height: 18px;
+  background: {t.control}; border: 1px solid {t.stroke}; border-bottom-color: {t.stroke_strong};
+  border-radius: 4px; padding: 5px 14px; min-height: 20px;
 }}
-QPushButton:hover {{ background: rgba(255,255,255,0.22); }}
-QPushButton:pressed {{ background: rgba(255,255,255,0.08); }}
-QPushButton:checked {{
-  background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 rgba(255,138,92,0.85), stop:1 rgba(255,79,139,0.85));
-  border: 1px solid rgba(255,255,255,0.55);
-}}
+QPushButton:hover {{ background: {t.control_hover}; }}
+QPushButton:pressed {{ background: {t.control_pressed}; color: {t.text2}; }}
+QPushButton:disabled {{ color: {t.text3}; border-bottom-color: {t.stroke}; }}
+QPushButton:checked {{ background: {t.selected}; border-color: {t.stroke_strong}; font-weight: 600; }}
 QPushButton#primary {{
-  background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 {ACCENT_A}, stop:0.55 {ACCENT_B}, stop:1 {ACCENT_C});
-  border: 1px solid rgba(255,255,255,0.55); border-top-color: rgba(255,255,255,0.9);
-  font-weight: 600; padding: 7px 20px; border-radius: 16px;
+  background: {t.accent}; color: {t.on_accent}; border: 1px solid {edge}; font-weight: 600; padding: 5px 20px;
 }}
-QPushButton#primary:hover {{ border: 1px solid #ffffff; }}
-QPushButton#chrome {{ background: transparent; border: none; padding: 2px 8px; font-size: 11pt; border-radius: 6px; }}
-QPushButton#chrome:hover {{ background: rgba(255,80,100,0.6); }}
+QPushButton#primary:hover {{ background: {acc_hover}; }}
+QPushButton#primary:pressed {{ background: {acc_press}; }}
+QPushButton#primary:disabled {{ background: {t.control}; color: {t.text3}; border: 1px solid {t.stroke}; }}
+QPushButton#subtle {{ background: transparent; border: 1px solid transparent; }}
+QPushButton#subtle:hover {{ background: {t.control_hover}; }}
+
+QWidget#segbar {{ background: {t.control}; border: 1px solid {t.stroke}; border-radius: 6px; }}
+QPushButton#seg {{
+  background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 4px 12px;
+  color: {t.text2}; min-height: 18px;
+}}
+QPushButton#seg:hover {{ background: {t.control_hover}; color: {t.text}; }}
+QPushButton#seg:checked {{ background: {t.selected}; color: {t.text}; border-color: {t.stroke}; font-weight: 600; }}
+
+QWidget#tabbar {{ border-bottom: 1px solid {t.stroke}; }}
+QPushButton#tab {{
+  background: transparent; border: none; border-bottom: 3px solid transparent; border-radius: 0;
+  padding: 7px 14px 7px 14px; color: {t.text2}; font-size: 10pt;
+}}
+QPushButton#tab:hover {{ color: {t.text}; }}
+QPushButton#tab:checked {{ color: {t.text}; font-weight: 600; border-bottom: 3px solid {t.accent}; background: transparent; }}
+
+QPushButton#chrome {{ background: transparent; border: none; border-radius: 0; padding: 0; min-width: 46px; min-height: 40px; }}
+QPushButton#chrome:hover {{ background: {t.control_hover}; }}
+QPushButton#chromeClose {{ background: transparent; border: none; border-radius: 0; padding: 0; min-width: 46px; min-height: 40px; }}
+QPushButton#chromeClose:hover {{ background: #C42B1C; }}
 QPushButton#swatch {{ border-radius: 12px; padding: 0; min-width: 24px; max-width: 24px; min-height: 24px; max-height: 24px; }}
-QPushButton#swatch:checked {{ border: 2px solid #ffffff; }}
-QSlider::groove:horizontal {{ height: 4px; background: rgba(255,255,255,0.22); border-radius: 2px; }}
-QSlider::sub-page:horizontal {{
-  background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 {ACCENT_A}, stop:0.5 {ACCENT_B}, stop:1 {ACCENT_C}); border-radius: 2px;
-}}
+QPushButton#swatch:checked {{ border: 2px solid {t.text}; }}
+
+QSlider {{ min-height: 22px; }}
+QSlider::groove:horizontal {{ height: 4px; background: {t.track}; border-radius: 2px; }}
+QSlider::sub-page:horizontal {{ background: {t.accent}; border-radius: 2px; }}
 QSlider::handle:horizontal {{
-  background: #ffffff; width: 14px; height: 14px; margin: -6px 0; border-radius: 7px;
-  border: 1px solid rgba(0,0,0,0.15);
+  width: 20px; height: 20px; margin: -8px 0; border-radius: 10px; border: 1px solid {t.stroke};
+  background: qradialgradient(cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,
+                              stop:0 {t.accent}, stop:0.46 {t.accent}, stop:0.52 {t.thumb}, stop:1 {t.thumb});
 }}
-QSpinBox, QLineEdit, QComboBox {{
-  background: rgba(0,0,0,0.16); border: 1px solid rgba(255,255,255,0.22);
-  border-bottom-color: rgba(255,255,255,0.40);
-  border-radius: 10px; padding: 4px 8px; selection-background-color: {ACCENT_B};
+QSlider::handle:horizontal:hover {{
+  background: qradialgradient(cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,
+                              stop:0 {t.accent}, stop:0.56 {t.accent}, stop:0.62 {t.thumb}, stop:1 {t.thumb});
 }}
-QLineEdit:focus, QSpinBox:focus {{ border: 1px solid rgba(255,255,255,0.7); }}
-QFrame#card {{ background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.14); border-radius: 14px; }}
-QLabel#big {{ font-size: 17pt; font-weight: 700; }}
-QLabel#good {{ color: #8dffb8; font-weight: 600; }}
-QLabel#warn {{ color: #ffd36b; font-weight: 600; }}
-QComboBox QAbstractItemView {{ background: #2a2438; border: 1px solid rgba(255,255,255,0.25); }}
-QCheckBox::indicator {{ width: 16px; height: 16px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.5); background: rgba(255,255,255,0.1); }}
-QCheckBox::indicator:checked {{ background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 {ACCENT_A}, stop:1 {ACCENT_B}); }}
-QTableWidget {{ background: rgba(0,0,0,0.12); border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; gridline-color: rgba(255,255,255,0.08); }}
+
+QSpinBox, QDoubleSpinBox, QLineEdit, QComboBox {{
+  background: {t.control}; border: 1px solid {t.stroke}; border-bottom: 1px solid {t.stroke_strong};
+  border-radius: 4px; padding: 4px 10px; min-height: 22px; selection-background-color: {t.accent};
+  selection-color: {t.on_accent};
+}}
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {{ border-bottom: 2px solid {t.accent}; }}
+QSpinBox::up-button, QSpinBox::down-button, QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {{ width: 0; border: none; }}
+QComboBox::drop-down {{ border: none; width: 28px; }}
+QComboBox::down-arrow {{ image: url({chevron}); width: 12px; height: 12px; }}
+QComboBox QAbstractItemView {{
+  background: {t.card}; border: 1px solid {t.stroke}; border-radius: 6px; padding: 4px;
+  selection-background-color: {t.selected}; selection-color: {t.text}; outline: none;
+}}
+
+QCheckBox {{ spacing: 10px; }}
+QCheckBox::indicator {{ width: 18px; height: 18px; border-radius: 4px; border: 1px solid {t.stroke_strong}; background: {t.control}; }}
+QCheckBox::indicator:hover {{ background: {t.control_hover}; }}
+QCheckBox::indicator:checked {{ background: {t.accent}; border: 1px solid {t.accent}; image: url({check}); }}
+
+QFrame#card {{ background: {t.card}; border: 1px solid {t.stroke}; border-radius: 8px; }}
+QFrame#footer {{ background: {t.footer}; border: none; border-top: 1px solid {t.stroke}; }}
+
+QTableWidget, QListWidget {{
+  background: transparent; border: 1px solid {t.stroke}; border-radius: 6px; gridline-color: {t.stroke};
+  selection-background-color: {t.selected}; selection-color: {t.text}; outline: none;
+}}
 QHeaderView {{ background: transparent; }}
 QTableCornerButton::section {{ background: transparent; border: none; }}
-QHeaderView::section {{ background: rgba(255,255,255,0.10); border: none; padding: 4px; font-weight: 600; }}
-QScrollBar:vertical {{ background: transparent; width: 8px; }}
-QScrollBar::handle:vertical {{ background: rgba(255,255,255,0.3); border-radius: 4px; min-height: 30px; }}
-QScrollBar::add-line, QScrollBar::sub-line {{ height: 0; }}
-QToolTip {{ background: #2a2438; color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; padding: 4px; }}
-QMenu {{ background: #2a2438; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; padding: 4px; }}
-QMenu::item {{ padding: 6px 18px; border-radius: 5px; }}
-QMenu::item:selected {{ background: rgba(255,255,255,0.15); }}
+QHeaderView::section {{
+  background: transparent; border: none; border-bottom: 1px solid {t.stroke}; padding: 6px 8px;
+  font-weight: 600; color: {t.text2};
+}}
+QScrollBar:vertical {{ background: transparent; width: 8px; margin: 2px; }}
+QScrollBar::handle:vertical {{ background: {t.track}; border-radius: 3px; min-height: 30px; }}
+QScrollBar:horizontal {{ background: transparent; height: 8px; margin: 2px; }}
+QScrollBar::handle:horizontal {{ background: {t.track}; border-radius: 3px; min-width: 30px; }}
+QScrollBar::add-line, QScrollBar::sub-line, QScrollBar::add-page, QScrollBar::sub-page {{ width: 0; height: 0; background: none; }}
+QToolTip {{ background: {t.card}; color: {t.text}; border: 1px solid {t.stroke}; border-radius: 4px; padding: 5px 8px; }}
+QMenu {{ background: {t.card}; border: 1px solid {t.stroke}; border-radius: 8px; padding: 4px; }}
+QMenu::item {{ padding: 7px 24px 7px 14px; border-radius: 4px; }}
+QMenu::item:selected {{ background: {t.selected}; }}
+QMenu::separator {{ height: 1px; background: {t.stroke}; margin: 4px 8px; }}
+QMenu::indicator {{ width: 14px; height: 14px; }}
 """
 
 
 def qss() -> str:
-    """The stylesheet, with a font family that is really installed (see util.ui_family)."""
+    """The stylesheet, with font families that are really installed (see util.ui_family)."""
     from .util import ui_family
-    return _QSS.replace("@FONT@", ui_family(False))
+    return _build_qss().replace("@FONT@", ui_family(False)).replace("@DISPLAY@", ui_family(True))
 
 
 def __getattr__(name):        # keep `glass.QSS` working
@@ -188,6 +249,30 @@ def __getattr__(name):        # keep `glass.QSS` working
         return qss()
     raise AttributeError(name)
 
+
+
+# ---------------------------------------------------------------- Windows 11 native frame
+class _MARGINS(ctypes.Structure):
+    _fields_ = [("l", ctypes.c_int), ("r", ctypes.c_int), ("t", ctypes.c_int), ("b", ctypes.c_int)]
+
+
+def native_frame(hwnd: int, dark: bool = True) -> bool:
+    """Frameless window that still gets Windows 11's rounded corners and soft system shadow
+    (DWM draws both outside our client area, like on any normal app window)."""
+    if sys.platform != "win32":
+        return False
+    try:
+        dwm = ctypes.windll.dwmapi
+        h = ctypes.c_void_p(hwnd)
+        pref = ctypes.c_int(2)                                   # DWMWCP_ROUND
+        dwm.DwmSetWindowAttribute(h, 33, ctypes.byref(pref), ctypes.sizeof(pref))
+        on = ctypes.c_int(1 if dark else 0)                      # DWMWA_USE_IMMERSIVE_DARK_MODE
+        dwm.DwmSetWindowAttribute(h, 20, ctypes.byref(on), ctypes.sizeof(on))
+        m = _MARGINS(1, 1, 1, 1)                                 # 1 px of "frame" = system shadow
+        dwm.DwmExtendFrameIntoClientArea(h, ctypes.byref(m))
+        return True
+    except Exception:
+        return False
 
 
 # ---------------------------------------------------------------- Windows acrylic

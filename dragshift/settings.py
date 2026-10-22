@@ -27,6 +27,7 @@ DEFAULTS = {
     "trigger": "shift",
     "welcomed": False,
     "language": "auto",
+    "theme": "auto",
 }
 
 
@@ -55,6 +56,8 @@ class Settings:
             CONFIG[k] = self.get(k)
         if not i18n_applied[0]:   # the UI is built once: language changes apply after a restart
             set_language(self.get("language"))
+            from . import theme
+            theme.set_mode(self.get("theme"))
             i18n_applied[0] = True
 
 
@@ -108,6 +111,7 @@ def set_autostart(on: bool):
 TRIGGERS = ([("shift", "Shift ⇧"), ("ctrl", "Control ⌃"), ("alt", "Option ⌥")] if IS_MAC
             else [("shift", "Shift"), ("ctrl", "Ctrl"), ("alt", "Alt")])
 OUTPUTS = [("next", "Next to the original"), ("folder", "In a “DragShift” subfolder")]
+THEMES = [("auto", "Same as Windows"), ("dark", "Dark"), ("light", "Light")]
 DPIS = [(150, "150 dpi · small"), (200, "200 dpi · balanced"), (300, "300 dpi · print")]
 
 
@@ -115,7 +119,7 @@ class SettingsWindow(GlassWindow):
     changed = Signal()
 
     def __init__(self, settings: Settings):
-        super().__init__(tr("Settings"), size=(520, 520))
+        super().__init__(tr("Settings"), size=(560, 600))
         self.s = settings
         grid = QGridLayout()
         grid.setHorizontalSpacing(14)
@@ -171,6 +175,11 @@ class SettingsWindow(GlassWindow):
         self.lang.currentIndexChanged.connect(lambda _: self._save("language", self.lang.currentData()))
         grid.addWidget(self.lang, r, 1)
         r += 1
+        grid.addWidget(QLabel(tr("Theme")), r, 0)
+        self.theme = combo(THEMES, self.s.get("theme"))
+        self.theme.currentIndexChanged.connect(lambda _: self._save("theme", self.theme.currentData()))
+        grid.addWidget(self.theme, r, 1)
+        r += 1
         lang_hint = QLabel(tr("Takes effect after restarting DragShift"))
         lang_hint.setObjectName("dim")
         grid.addWidget(lang_hint, r, 1)
@@ -194,14 +203,10 @@ class SettingsWindow(GlassWindow):
         self.body.addStretch(1)
         about = QLabel(tr("DragShift {v}  ·  originals are never modified", v=__version__))
         about.setObjectName("dim")
-        foot = QHBoxLayout()
-        foot.addWidget(about)
-        foot.addStretch(1)
         done = QPushButton(tr("Done"))
         done.setObjectName("primary")
         done.clicked.connect(self.close)
-        foot.addWidget(done)
-        self.body.addLayout(foot)
+        self.set_footer([about], [done])
 
     def _save(self, key, value):
         self.s.set(key, value)
@@ -217,20 +222,22 @@ class WelcomeWindow(GlassWindow):
              "in your file manager (Thunar, Nautilus…)" if IS_LINUX else "in File Explorer or on the desktop")),
             ("2", tr("Press {key}", key=trigger_label), tr("the glass menu opens right under your cursor")),
             ("3", tr("Drop it on a slice"), tr("the result is saved next to the original")),
-            ("⇄", tr("Tap {key} again", key=trigger_label), tr("to switch between Convert and Tools")),
+            ("4", tr("Tap {key} again", key=trigger_label), tr("to switch between Convert and Tools")),
         ]
+        from . import theme
+        t = theme.current()
         for n, head, sub in steps:
             row = QHBoxLayout()
             badge = QLabel(n)
             badge.setAlignment(Qt.AlignCenter)
-            badge.setFixedSize(34, 34)
-            badge.setStyleSheet("background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #5ac8ff, stop:1 #2f7bff);"
-                                "border-radius: 17px; font-weight: 700; font-size: 12pt;")
+            badge.setFixedSize(32, 32)
+            badge.setStyleSheet(f"background: {t.control}; border: 1px solid {t.stroke}; border-radius: 16px;"
+                                f"color: {t.accent_text}; font-weight: 600; font-size: 11pt;")
             row.addWidget(badge)
             col = QVBoxLayout()
-            col.setSpacing(0)
+            col.setSpacing(1)
             h = QLabel(head)
-            h.setStyleSheet("font-size: 12pt; font-weight: 600;")
+            h.setStyleSheet("font-size: 11.5pt; font-weight: 600;")
             d = QLabel(sub)
             d.setObjectName("dim")
             col.addWidget(h)
@@ -258,17 +265,15 @@ class WelcomeWindow(GlassWindow):
                 note.setObjectName("warn")
                 note.setWordWrap(True)
                 self.body.addWidget(note)
-        foot = QHBoxLayout()
+        left = []
         if IS_WIN or IS_MAC or IS_LINUX:
             self.auto = QCheckBox(tr("Start with Windows" if IS_WIN else "Open at login"))
             self.auto.setChecked(True)
-            foot.addWidget(self.auto)
-        foot.addStretch(1)
+            left.append(self.auto)
         ok = QPushButton(tr("Got it"))
         ok.setObjectName("primary")
         ok.clicked.connect(self._done)
-        foot.addWidget(ok)
-        self.body.addLayout(foot)
+        self.set_footer(left, [ok])
 
     def _done(self):
         self.s.set("welcomed", True)

@@ -32,7 +32,7 @@ IPC_NAME = ipc_name()
 
 GLYPHS = {"Compress": "⇲", "Metadata": "ⓘ", "Redact": "▮", "Crop": "⌗", "Edit": "☼",
           "Annotate": "✎", "Add BG": "▣", "Resize": "⤢", "Split": "✂", "Rotate": "⟳",
-          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚", "Text": "¶"}
+          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚", "Text": "¶", "Unlock": "⚷"}
 
 HINTS = {
     "Compress": "Shrink file size", "Metadata": "View · remove GPS", "Redact": "Hide private info",
@@ -40,7 +40,7 @@ HINTS = {
     "Add BG": "Gradient backdrop", "Resize": "Change dimensions", "Split": "One PDF per page",
     "Rotate": "Turn pages 90°", "Merge": "Join into one PDF", "Protect": "Add a password",
     "Extract": "Save embedded images", "Snip": "Area → image",
-    "Text": "Copy the text (OCR)",
+    "Text": "Copy the text (OCR)", "Unlock": "Remove the password",
 }
 FORMAT_HINTS = {"JPG": "Small, universal", "PNG": "Lossless · transparency", "WEBP": "Smallest for web",
                 "HEIC": "iPhone format", "TIFF": "Print · archival", "AVIF": "Next-gen, tiny",
@@ -251,7 +251,12 @@ class DragShiftApp(QObject):
         if cat == "image":
             rings["Tools"] = [Item(n, GLYPHS[n], key=f"tool:{n}", hint=HINTS[n]) for n in IMAGE_TOOLS]
         elif cat == "pdf":
+            lock = imaging.pdf_lock_state(paths[0])
+            if lock == "password":   # nothing else works until the password is removed
+                return {"Tools": [Item("Unlock", GLYPHS["Unlock"], key="tool:Unlock", hint=HINTS["Unlock"])]}
             names = PDF_TOOLS[:4] + (["Merge"] if len(same) > 1 else []) + PDF_TOOLS[4:]
+            if lock == "restricted":
+                names = names + ["Unlock"]
             rings["Tools"] = [Item(n, GLYPHS[n], key=f"tool:{n}", hint=HINTS[n]) for n in names]
         return rings
 
@@ -276,6 +281,12 @@ class DragShiftApp(QObject):
                 self.open_window(tools.MetadataWindow(paths[0], self.notify, is_pdf=True))
             elif name == "Protect":
                 self.open_window(tools.ProtectWindow(paths[0], self.notify))
+            elif name == "Unlock":
+                if imaging.pdf_lock_state(paths[0]) == "password":
+                    self.open_window(tools.UnlockWindow(paths[0], self.notify))
+                else:
+                    self.submit("tool:Unlock", paths, lambda: [imaging.unlock_pdf(p) for p in paths],
+                                "Removing password…")
             elif name == "Snip":
                 try:
                     self.open_window(tools.PdfSnipWindow(paths[0], self.notify))

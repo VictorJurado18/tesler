@@ -9,7 +9,7 @@ from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter, ImageOp
 from PIL.ExifTags import GPSTAGS, TAGS
 
 from .convert import atomic_save, fitz, flatten, open_image, open_pdf, save_image
-from .util import sibling
+from .util import UserError, sibling
 from .i18n import tr
 
 EXT_TARGET = {".jpg": "JPG", ".jpeg": "JPG", ".png": "PNG", ".webp": "WEBP", ".tif": "TIFF",
@@ -317,6 +317,33 @@ def protect_pdf(src: str | Path, password: str) -> Path:
         perms = int(fitz.PDF_PERM_ACCESSIBILITY | fitz.PDF_PERM_PRINT | fitz.PDF_PERM_COPY)
         doc.save(out, encryption=fitz.PDF_ENCRYPT_AES_256, owner_pw=password, user_pw=password,
                  permissions=perms, garbage=3, deflate=True)
+    return out
+
+
+def pdf_lock_state(src: str | Path) -> str:
+    """'open' (no encryption), 'password' (needs a password to open),
+    'restricted' (opens, but encrypted with an owner password / restrictions)."""
+    try:
+        with fitz.open(src) as doc:
+            if doc.needs_pass:
+                return "password"
+            return "restricted" if doc.is_encrypted else "open"
+    except Exception:
+        return "open"
+
+
+def check_pdf_password(src: str | Path, password: str) -> bool:
+    with fitz.open(src) as doc:
+        return not doc.needs_pass or bool(doc.authenticate(password))
+
+
+def unlock_pdf(src: str | Path, password: str = "") -> Path:
+    """Save an unencrypted copy (the password must be right, of course)."""
+    out = sibling(src, "Unlocked", ".pdf")
+    with fitz.open(src) as doc:
+        if doc.needs_pass and not doc.authenticate(password):
+            raise UserError("Wrong password.")
+        doc.save(out, encryption=fitz.PDF_ENCRYPT_NONE, garbage=3, deflate=True)
     return out
 
 

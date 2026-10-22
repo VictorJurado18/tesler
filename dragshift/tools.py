@@ -1463,6 +1463,41 @@ class ProtectWindow(ToolWindow):
         self.run(lambda: [imaging.protect_pdf(path, pw)], "Encrypting…")
 
 
+# ================================================================ UNLOCK PDF
+class UnlockWindow(ToolWindow):
+    tool_name = "Unlock"
+
+    def __init__(self, path, notify):
+        super().__init__("Remove PDF password", path, notify, size=(520, 280))
+        g = QGridLayout()
+        self.pw = QLineEdit()
+        self.pw.setEchoMode(QLineEdit.Password)
+        g.addWidget(QLabel(tr("Password")), 0, 0)
+        g.addWidget(self.pw, 0, 1)
+        show = QCheckBox(tr("Show"))
+        show.toggled.connect(lambda on: self.pw.setEchoMode(QLineEdit.Normal if on else QLineEdit.Password))
+        g.addWidget(show, 0, 2)
+        self.body.addLayout(g)
+        self.msg = QLabel(tr("Type the PDF's current password. A copy without password is saved next to it."))
+        self.msg.setObjectName("dim")
+        self.msg.setWordWrap(True)
+        self.body.addWidget(self.msg)
+        self.body.addStretch(1)
+        self.body.addLayout(self.footer("Remove password", self.save))
+        self.pw.returnPressed.connect(self.save)
+        QTimer.singleShot(0, self.pw.setFocus)
+
+    def save(self):
+        pw, path = self.pw.text(), self.path
+        if not imaging.check_pdf_password(path, pw):   # check now, so a typo keeps the window open
+            self.msg.setObjectName("warn")
+            self.msg.setStyleSheet("")
+            self.msg.setText(tr("Wrong password. Try again."))
+            self.pw.selectAll()
+            return
+        self.run(lambda: [imaging.unlock_pdf(path, pw)], "Removing password…")
+
+
 # ================================================================ PDF SNIP
 class SnipView(CropView):
     """CropView that starts with no selection: drag a box over the part you want."""
@@ -1544,7 +1579,7 @@ class PdfSnipWindow(ToolWindow):
         QShortcut(QKeySequence(Qt.Key_PageDown), self, activated=lambda: self.go(self.page + 1))
         QShortcut(QKeySequence.Copy, self, activated=self.copy)
 
-        self.copy_btn = QPushButton(tr("Copy"))
+        self.copy_btn = QPushButton(tr("Copy image"))
         self.copy_btn.setToolTip(tr("Copy the snip to paste it anywhere (Ctrl+C)"))
         self.copy_btn.clicked.connect(self.copy)
         self.text_btn = QPushButton(tr("Copy text"))
@@ -1598,8 +1633,8 @@ class PdfSnipWindow(ToolWindow):
             return
         im = imaging.snip_pdf(self.path, self.page, self._frac(), self.quality.currentData())
         QGuiApplication.clipboard().setImage(qimage_from_pil(im))
-        self.copy_btn.setText(tr("Copied ✓"))
-        QTimer.singleShot(1400, lambda: self.copy_btn.setText(tr("Copy")))
+        self.copy_btn.setText(tr("Image copied ✓"))
+        QTimer.singleShot(1400, lambda: self.copy_btn.setText(tr("Copy image")))
 
     def copy_text(self):
         """Text layer of the PDF if it has one (instant), otherwise Windows OCR (~1 s)."""

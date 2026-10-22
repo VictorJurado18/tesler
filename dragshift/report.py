@@ -139,6 +139,9 @@ def summarize(action: str, srcs: list, outs: list, extra: str = "") -> Result:
     if name == "Snip":
         return Result(tr("Snip saved"), f"{_dim_str(dims(o0))} PNG · {human_size(after)} · {o0.name}", outs, srcs)
 
+    if name == "Unlock":
+        return Result(tr("Password removed"), o0.name, outs, srcs, good=tr("no password"))
+
     if name == "Protect":
         return Result(tr("Password protected"), f"AES-256 · {o0.name}", outs, srcs, good=tr("encrypted"))
 

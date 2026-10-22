@@ -105,7 +105,7 @@ PT: dict[str, str] = {
 
     # ---------------------------------------------------------------- notifications
     "Open": "Abrir",
-    "Show in folder": "Mostrar na pasta",
+    "Show in folder": "Ver na pasta",
     "Undo": "Desfazer",
     "Undone": "Desfeito",
     "Moved {n} file to the {bin}": "{n} arquivo movido para a {bin}",
@@ -213,6 +213,8 @@ PT: dict[str, str] = {
     "Redo": "Refazer",
     "Copy": "Copiar",
     "Copied ✓": "Copiado ✓",
+    "Copy image": "Copiar imagem",
+    "Image copied ✓": "Imagem copiada ✓",
     "Size": "Tamanho",
     "Show": "Mostrar",
     "Close (Esc)": "Fechar (Esc)",
@@ -347,11 +349,25 @@ PT: dict[str, str] = {
     "Previous page (Page Up)": "Página anterior (Page Up)",
     "Next page (Page Down)": "Próxima página (Page Down)",
     "Page {p} of {n}": "Página {p} de {n}",
-    "Copy the snip to paste it anywhere (Ctrl+C)": "Copiar o recorte para colar em qualquer lugar (Ctrl+C)",
+    "Copy the snip to paste it anywhere (Ctrl+C)": "Copiar a imagem do trecho para colar em qualquer lugar (Ctrl+C)",
     "Save PNG": "Salvar PNG",
     "Saving snip…": "Salvando recorte…",
     "Snip saved": "Recorte salvo",
     "page {n} snip": "página {n} recorte",
+
+    # unlock
+    "Unlock": "Tirar senha",
+    "Unlocked": "Sem senha",
+    "Remove the password": "Remover a senha",
+    "Remove PDF password": "Remover senha do PDF",
+    "Type the PDF's current password. A copy without password is saved next to it.":
+        "Digite a senha atual do PDF. Uma cópia sem senha é salva ao lado dele.",
+    "Remove password": "Remover senha",
+    "Wrong password. Try again.": "Senha incorreta. Tente de novo.",
+    "Wrong password.": "Senha incorreta.",
+    "Removing password…": "Removendo senha…",
+    "Password removed": "Senha removida",
+    "no password": "sem senha",
 
     # copy text / OCR
     "Text": "Texto",

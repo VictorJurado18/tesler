@@ -22,7 +22,7 @@ from .util import ui_family
 from .report import Result
 from .i18n import plural, tr
 
-W, H = 380, 104
+W, H = 420, 104
 GAP = 10
 MARGIN = 18
 
@@ -66,6 +66,23 @@ def trash(paths: list[Path]) -> int:
     return n
 
 
+def copy_files(paths) -> None:
+    """Put the files on the clipboard: paste into Explorer, WhatsApp, Teams, e-mail…
+    A single image also goes as picture data, for apps that only take images."""
+    from PySide6.QtCore import QMimeData
+    from PySide6.QtGui import QGuiApplication, QImage
+    paths = [Path(p) for p in paths if Path(p).exists()]
+    if not paths:
+        return
+    md = QMimeData()
+    md.setUrls([QUrl.fromLocalFile(str(p.resolve())) for p in paths])
+    if len(paths) == 1 and paths[0].suffix.lower() in (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif"):
+        img = QImage(str(paths[0]))
+        if not img.isNull():
+            md.setImageData(img)
+    QGuiApplication.clipboard().setMimeData(md)
+
+
 class ToastCard(QWidget):
     closed = Signal(object)
 
@@ -79,6 +96,7 @@ class ToastCard(QWidget):
         self.setMouseTracking(True)
         self.resize(W, H)
         self.state = "working"     # working | done | error | info
+        self.copied = False
         self.title = ""
         self.detail = ""
         self.good = ""
@@ -206,6 +224,11 @@ class ToastCard(QWidget):
         elif name == "Show":
             reveal(r.outs[0])
             self.dismiss()
+        elif name == "Copy":
+            copy_files(r.outs)
+            self.copied = True
+            self.update()
+            QTimer.singleShot(1600, self._uncopy)
         elif name == "Undo":
             n = trash(r.outs)
             self.result = None
@@ -213,6 +236,10 @@ class ToastCard(QWidget):
             self.good = ""
             bin_name = tr("Recycle Bin" if sys.platform == "win32" else "Trash")
             self.info(tr("Undone"), plural(n, "Moved {n} file to the {bin}", "Moved {n} files to the {bin}", bin=bin_name), 2500)
+
+    def _uncopy(self):
+        self.copied = False
+        self.update()
 
     # ------------------------------------------------------------ paint
     def paintEvent(self, e):
@@ -304,8 +331,9 @@ class ToastCard(QWidget):
         # action buttons
         self.buttons = []
         if self.state == "done" and self.result and self.result.outs:
-            names = ["Open", "Show", "Undo"]
-            labels = {"Open": tr("Open"), "Show": tr("Show in folder"), "Undo": tr("Undo")}
+            names = ["Open", "Copy", "Show", "Undo"]
+            labels = {"Open": tr("Open"), "Copy": tr("Copied ✓") if self.copied else tr("Copy"),
+                      "Show": tr("Show in folder"), "Undo": tr("Undo")}
             f.setPixelSize(12)
             f.setBold(True)
             p.setFont(f)

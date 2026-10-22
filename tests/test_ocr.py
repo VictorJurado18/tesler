@@ -64,3 +64,16 @@ def test_prepare_limits_and_upscales():
 
 def test_tidy():
     assert ocr.tidy("a  \r\n\n\n\nb\x0c\n") == "a\n\nb"
+
+
+def test_unlock_pdf(tmp_path):
+    from dragshift import imaging
+    p = make_pdf(tmp_path / "a.pdf")
+    locked = imaging.protect_pdf(p, "segredo")
+    assert imaging.pdf_lock_state(locked) == "password"
+    assert not imaging.check_pdf_password(locked, "errada")
+    with pytest.raises(UserError):
+        imaging.unlock_pdf(locked, "errada")
+    out = imaging.unlock_pdf(locked, "segredo")
+    assert imaging.pdf_lock_state(out) == "open"
+    assert "Receita" in fitz.open(out)[0].get_text()

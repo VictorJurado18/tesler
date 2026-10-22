@@ -8,7 +8,8 @@ IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".heic", ".heif", ".tif", ".tiff
               ".avif", ".bmp", ".gif", ".ico"}
 PDF_EXTS = {".pdf"}
 DOCX_EXTS = {".docx"}
-TEXT_EXTS = {".txt", ".md", ".csv", ".log", ".json", ".xml", ".html", ".htm"}
+TEXT_EXTS = {".txt", ".md", ".log", ".json", ".xml", ".html", ".htm"}
+SHEET_EXTS = {".csv", ".tsv", ".xlsx", ".xlsm"}
 
 
 def category(path: str | Path) -> str | None:
@@ -19,6 +20,8 @@ def category(path: str | Path) -> str | None:
         return "pdf"
     if ext in DOCX_EXTS:
         return "docx"
+    if ext in SHEET_EXTS:
+        return "sheet"
     if ext in TEXT_EXTS:
         return "text"
     return None

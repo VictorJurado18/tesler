@@ -48,7 +48,8 @@ HINTS = {
 FORMAT_HINTS = {"JPG": "Small, universal", "PNG": "Lossless · transparency", "WEBP": "Smallest for web",
                 "HEIC": "iPhone format", "TIFF": "Print · archival", "AVIF": "Next-gen, tiny",
                 "BMP": "Uncompressed", "PDF": "Document", "ICO": "Windows icon", "GIF": "Legacy web",
-                "DOCX": "Editable Word", "TXT": "Plain text"}
+                "DOCX": "Editable Word", "TXT": "Plain text", "XLSX": "Excel spreadsheet",
+                "CSV": "Comma/semicolon text"}
 
 IMAGE_TOOLS = ["Compress", "Resize", "Crop", "Edit", "Annotate", "Redact", "Cutout", "Add BG", "Text", "Metadata"]
 PDF_TOOLS = ["Snip", "Organize", "OCR", "Compress", "Split", "Rotate", "Protect", "Extract", "Metadata"]

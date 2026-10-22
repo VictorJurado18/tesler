@@ -407,6 +407,15 @@ PT: dict[str, str] = {
         "Não foi possível baixar o modelo de remoção de fundo. Verifique a internet e tente de novo.",
     "The downloaded model is corrupted. Try again.": "O modelo baixado veio corrompido. Tente de novo.",
 
+    # spreadsheets
+    "Images · PDF · Word · Excel · Text": "Imagens · PDF · Word · Excel · Texto",
+    "Excel spreadsheet": "Planilha do Excel",
+    "Comma/semicolon text": "Texto separado por ;",
+    "This spreadsheet couldn't be opened (is it password-protected?).":
+        "Não foi possível abrir esta planilha (ela tem senha?).",
+    "This spreadsheet is empty.": "Esta planilha está vazia.",
+    "This file is empty.": "Este arquivo está vazio.",
+
     # unlock
     "Unlock": "Tirar senha",
     "Unlocked": "Sem senha",

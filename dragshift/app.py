@@ -32,15 +32,16 @@ IPC_NAME = ipc_name()
 
 GLYPHS = {"Compress": "⇲", "Metadata": "ⓘ", "Redact": "▮", "Crop": "⌗", "Edit": "☼",
           "Annotate": "✎", "Add BG": "▣", "Resize": "⤢", "Split": "✂", "Rotate": "⟳",
-          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚", "Text": "¶", "Unlock": "⚷"}
+          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚", "Text": "¶", "Unlock": "⚷", "Organize": "▦"}
 
 HINTS = {
     "Compress": "Shrink file size", "Metadata": "View · remove GPS", "Redact": "Hide private info",
     "Crop": "Trim to a ratio", "Edit": "Light · colour · rotate", "Annotate": "Arrows · text · steps",
     "Add BG": "Gradient backdrop", "Resize": "Change dimensions", "Split": "One PDF per page",
-    "Rotate": "Turn pages 90°", "Merge": "Join into one PDF", "Protect": "Add a password",
+    "Rotate": "Turn pages 90°", "Merge": "Join in any order", "Protect": "Add a password",
     "Extract": "Save embedded images", "Snip": "Area → image",
     "Text": "Copy the text (OCR)", "Unlock": "Remove the password",
+    "Organize": "Reorder · rotate · delete · extract",
 }
 FORMAT_HINTS = {"JPG": "Small, universal", "PNG": "Lossless · transparency", "WEBP": "Smallest for web",
                 "HEIC": "iPhone format", "TIFF": "Print · archival", "AVIF": "Next-gen, tiny",
@@ -48,7 +49,7 @@ FORMAT_HINTS = {"JPG": "Small, universal", "PNG": "Lossless · transparency", "W
                 "DOCX": "Editable Word", "TXT": "Plain text"}
 
 IMAGE_TOOLS = ["Compress", "Resize", "Crop", "Edit", "Annotate", "Redact", "Add BG", "Text", "Metadata"]
-PDF_TOOLS = ["Snip", "Compress", "Split", "Rotate", "Protect", "Extract", "Metadata"]
+PDF_TOOLS = ["Snip", "Organize", "Compress", "Split", "Rotate", "Protect", "Extract", "Metadata"]
 
 
 # ---------------------------------------------------------------- background jobs
@@ -254,7 +255,7 @@ class DragShiftApp(QObject):
             lock = imaging.pdf_lock_state(paths[0])
             if lock == "password":   # nothing else works until the password is removed
                 return {"Tools": [Item("Unlock", GLYPHS["Unlock"], key="tool:Unlock", hint=HINTS["Unlock"])]}
-            names = PDF_TOOLS[:4] + (["Merge"] if len(same) > 1 else []) + PDF_TOOLS[4:]
+            names = [("Merge" if n == "Organize" and len(same) > 1 else n) for n in PDF_TOOLS]
             if lock == "restricted":
                 names = names + ["Unlock"]
             rings["Tools"] = [Item(n, GLYPHS[n], key=f"tool:{n}", hint=HINTS[n]) for n in names]
@@ -275,8 +276,11 @@ class DragShiftApp(QObject):
                             lambda: [o for p in paths for o in convert.convert(p, cat, name)], verb)
             return
         if cat == "pdf":
-            if name == "Merge":
-                self.submit("tool:Merge", paths, lambda: [imaging.merge_pdfs(paths)], "Merging…")
+            if name in ("Merge", "Organize"):
+                try:
+                    self.open_window(tools.OrganizeWindow(paths, self.notify))
+                except UserError as e:
+                    self.toasts.error(tr("Couldn't open {name}", name=tr(name)), tr(str(e)))
             elif name == "Metadata":
                 self.open_window(tools.MetadataWindow(paths[0], self.notify, is_pdf=True))
             elif name == "Protect":
@@ -564,7 +568,8 @@ def selftest() -> int:
                       tools.AnnotateWindow(str(src), n), tools.RedactWindow(str(src), n),
                       tools.MetadataWindow(str(src), n), tools.CompressWindow([str(src)], n),
                       tools.ResizeWindow([str(src)], n), tools.ProtectWindow(str(pdf), n),
-                      tools.PdfSnipWindow(str(pdf), n)):
+                      tools.PdfSnipWindow(str(pdf), n), tools.OrganizeWindow([str(pdf)], n),
+                      tools.UnlockWindow(str(pdf), n)):
                 w.close()
             ToastStack().info("ok", "ok").dismiss()
             check_text_renders()

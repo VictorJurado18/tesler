@@ -77,3 +77,31 @@ def test_unlock_pdf(tmp_path):
     out = imaging.unlock_pdf(locked, "segredo")
     assert imaging.pdf_lock_state(out) == "open"
     assert "Receita" in fitz.open(out)[0].get_text()
+
+
+def test_organize_pages(tmp_path):
+    from dragshift import imaging
+    a = tmp_path / "a.pdf"
+    b = tmp_path / "b.pdf"
+    for path, tag in ((a, "A"), (b, "B")):
+        doc = fitz.open()
+        for i in range(3):
+            doc.new_page().insert_text((72, 72), f"{tag}{i + 1}")
+        doc.save(path)
+    refs = imaging.list_pages([a, b])
+    assert len(refs) == 6
+    order = [refs[4], refs[0], imaging.PageRef(1, 2, 90)]          # B2, A1, B3 rotated
+    out = imaging.build_pdf([a, b], order, "Organized")
+    d = fitz.open(out)
+    assert [p.get_text().strip() for p in d] == ["B2", "A1", "B3"]
+    assert [p.rotation for p in d] == [0, 0, 90]
+
+
+def test_parse_page_ranges():
+    from dragshift import imaging
+    assert imaging.parse_page_ranges("1-3, 7, 9-", 10) == [0, 1, 2, 6, 8, 9]
+    assert imaging.parse_page_ranges("2;2;1", 5) == [1, 0]
+    assert imaging.parse_page_ranges("", 5) == []
+    for bad in ("0", "3-1", "11", "a"):
+        with pytest.raises(UserError):
+            imaging.parse_page_ranges(bad, 10)

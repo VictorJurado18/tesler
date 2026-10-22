@@ -608,3 +608,74 @@ def save_pdf_snip(src: str | Path, page: int, frac, dpi: int = 300) -> Path:
     out = sibling(src, tr("page {n} snip", n=page + 1), ".png")
     save_image(im, out, "PNG")
     return out
+
+
+# ---------------------------------------------------------------- organize / merge / extract pages
+@dataclass
+class PageRef:
+    src: int            # index into the list of source PDFs
+    page: int           # 0-based page number in that PDF
+    rotate: int = 0     # extra rotation chosen by the user (multiple of 90)
+
+
+def list_pages(srcs: list[str | Path]) -> list[PageRef]:
+    refs: list[PageRef] = []
+    for i, s in enumerate(srcs):
+        with open_pdf(s) as doc:
+            refs += [PageRef(i, n) for n in range(doc.page_count)]
+    return refs
+
+
+def page_thumbnail(src: str | Path, page: int, height: int = 150) -> Image.Image:
+    with open_pdf(src) as doc:
+        pg = doc[page]
+        k = height / max(1.0, pg.rect.height)
+        pix = pg.get_pixmap(matrix=fitz.Matrix(k, k), alpha=False)
+        return Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+
+
+def parse_page_ranges(text: str, n: int) -> list[int]:
+    """'1-3, 7, 10-' → 0-based indices (in order, no duplicates). Raises UserError on bad input."""
+    out: list[int] = []
+    text = text.replace(";", ",").replace(" ", "")
+    if not text:
+        return out
+    for part in text.split(","):
+        if not part:
+            continue
+        try:
+            if "-" in part:
+                a, b = part.split("-", 1)
+                lo = int(a) if a else 1
+                hi = int(b) if b else n
+            else:
+                lo = hi = int(part)
+        except ValueError:
+            raise UserError("Use page numbers like 1-3, 7, 10") from None
+        if lo < 1 or hi > n or lo > hi:
+            raise UserError("Use page numbers like 1-3, 7, 10")
+        for i in range(lo - 1, hi):
+            if i not in out:
+                out.append(i)
+    return out
+
+
+def build_pdf(srcs: list[str | Path], refs: list[PageRef], label: str) -> Path:
+    """New PDF with `refs` in order (pages from any of `srcs`, rotated as asked)."""
+    if not refs:
+        raise UserError("No pages to save.")
+    out = sibling(srcs[refs[0].src], label, ".pdf")
+    docs = [open_pdf(s) for s in srcs]
+    try:
+        nd = fitz.open()
+        for r in refs:
+            nd.insert_pdf(docs[r.src], from_page=r.page, to_page=r.page)
+            if r.rotate % 360:
+                pg = nd[-1]
+                pg.set_rotation((pg.rotation + r.rotate) % 360)
+        nd.save(out, garbage=3, deflate=True)
+        nd.close()
+    finally:
+        for d in docs:
+            d.close()
+    return out

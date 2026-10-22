@@ -139,6 +139,14 @@ def summarize(action: str, srcs: list, outs: list, extra: str = "") -> Result:
     if name == "Snip":
         return Result(tr("Snip saved"), f"{_dim_str(dims(o0))} PNG · {human_size(after)} · {o0.name}", outs, srcs)
 
+    if name in ("Organize", "ExtractPages"):
+        n = pages(o0)
+        if name == "ExtractPages":
+            label = tr("Pages extracted")
+        else:
+            label = tr("PDFs merged") if len(srcs) > 1 else tr("Pages organized")
+        return Result(label, f"{plural(n or 0, '{n} page', '{n} pages')} · {human_size(after)} · {o0.name}", outs, srcs)
+
     if name == "Unlock":
         return Result(tr("Password removed"), o0.name, outs, srcs, good=tr("no password"))
 

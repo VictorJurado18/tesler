@@ -94,7 +94,7 @@ PT: dict[str, str] = {
     "Light · colour · rotate": "Luz · cor · girar", "Arrows · text · steps": "Setas · texto · passos",
     "Gradient backdrop": "Fundo em degradê", "Change dimensions": "Mudar as dimensões",
     "One PDF per page": "Um PDF por página", "Turn pages 90°": "Girar páginas 90°",
-    "Join into one PDF": "Juntar num só PDF", "Add a password": "Adicionar senha",
+    "Join in any order": "Juntar na ordem que quiser", "Add a password": "Adicionar senha",
     "Save embedded images": "Salvar as imagens internas",
     # format hints
     "Small, universal": "Leve, universal", "Lossless · transparency": "Sem perdas · transparência",
@@ -354,6 +354,34 @@ PT: dict[str, str] = {
     "Saving snip…": "Salvando recorte…",
     "Snip saved": "Recorte salvo",
     "page {n} snip": "página {n} recorte",
+
+    # organize / merge / extract
+    "Organize": "Organizar",
+    "Reorder · rotate · delete · extract": "Reordenar · girar · apagar · extrair",
+    "Organize pages": "Organizar páginas",
+    "Merge PDFs": "Mesclar PDFs",
+    "Rotate selected pages left": "Girar páginas selecionadas para a esquerda",
+    "Rotate selected pages right": "Girar páginas selecionadas para a direita",
+    "🗑 Delete": "🗑 Apagar",
+    "Remove the selected pages (Delete)": "Remover as páginas selecionadas (Delete)",
+    "Drag pages to reorder · Ctrl/Shift+click to select several":
+        "Arraste as páginas para reordenar · Ctrl/Shift+clique para selecionar várias",
+    "Sort files by name": "Ordenar arquivos por nome",
+    "Select pages": "Selecionar páginas",
+    "e.g. 1-3, 7": "ex.: 1-3, 7",
+    "Save selected only": "Salvar só as selecionadas",
+    "New PDF with just the selected pages (extract)": "Novo PDF só com as páginas selecionadas (extrair)",
+    "Save PDF": "Salvar PDF",
+    "{n} selected": "{n} selecionada(s)",
+    "Use page numbers like 1-3, 7, 10": "Use números de página como 1-3, 7, 10",
+    "No pages to save.": "Nenhuma página para salvar.",
+    "Saving PDF…": "Salvando PDF…",
+    "Saving pages…": "Salvando páginas…",
+    "Organized": "Organizado",
+    "Extracted": "Extraído",
+    "Pages extracted": "Páginas extraídas",
+    "PDFs merged": "PDFs mesclados",
+    "Pages organized": "Páginas organizadas",
 
     # unlock
     "Unlock": "Tirar senha",

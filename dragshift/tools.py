@@ -11,7 +11,7 @@ from typing import Callable
 
 from PIL import Image
 from PySide6.QtCore import QObject, QPointF, QRectF, QRunnable, QSize, Qt, QThreadPool, QTimer, QUrl, Signal
-from PySide6.QtGui import (QColor, QDesktopServices, QFont, QGuiApplication, QImage, QKeySequence,
+from PySide6.QtGui import (QColor, QDesktopServices, QFont, QGuiApplication, QIcon, QImage, QKeySequence,
                            QPainter, QPainterPath, QPen, QPixmap, QPolygonF, QShortcut)
 from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QColorDialog, QComboBox, QFrame,
                                QGridLayout, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
@@ -1683,3 +1683,190 @@ class PdfSnipWindow(ToolWindow):
         else:
             self.notify(f"tool:{self.tool_name}", [str(path)], fn())
         self.view.reset_sel()
+
+
+# ================================================================ ORGANIZE PAGES (also: merge in order, extract)
+class OrganizeWindow(ToolWindow):
+    """Every page of one or more PDFs as thumbnails: drag to reorder, rotate, delete,
+    pick pages by number, then save all (merge/organize) or just the selection (extract)."""
+    tool_name = "Organize"
+    THUMB_H = 150
+
+    def __init__(self, paths, notify):
+        paths = sorted(paths, key=lambda p: Path(p).name.lower()) if len(paths) > 1 else list(paths)
+        title = "Merge PDFs" if len(paths) > 1 else "Organize pages"
+        super().__init__(title, paths, notify, size=(980, 780))
+        self.srcs = [str(p) for p in self.paths]
+        from PySide6.QtWidgets import QAbstractItemView, QListView, QListWidget
+        self.grid = QListWidget()
+        self.grid.setViewMode(QListView.IconMode)
+        self.grid.setIconSize(QSize(120, self.THUMB_H))
+        self.grid.setGridSize(QSize(140, self.THUMB_H + 42))
+        self.grid.setResizeMode(QListView.Adjust)
+        self.grid.setMovement(QListView.Snap)
+        self.grid.setDragDropMode(QAbstractItemView.InternalMove)
+        self.grid.setDefaultDropAction(Qt.MoveAction)
+        self.grid.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.grid.setUniformItemSizes(True)
+        self.grid.setWordWrap(True)
+        self.grid.setSpacing(6)
+        self.grid.setStyleSheet(
+            "QListWidget { background: rgba(0,0,0,0.14); border: 1px solid rgba(255,255,255,0.16);"
+            " border-radius: 10px; padding: 6px; }"
+            "QListWidget::item { color: white; border-radius: 8px; padding: 4px; }"
+            "QListWidget::item:selected { background: rgba(90,170,255,0.35); }"
+            "QListWidget::item:hover { background: rgba(255,255,255,0.08); }")
+        hint = QLabel(tr("Drag pages to reorder · Ctrl/Shift+click to select several"))
+        hint.setObjectName("dim")
+        self.body.addWidget(hint)
+        self.body.addWidget(self.grid, 1)
+
+        bar = QHBoxLayout()
+        for text, tip, fn in (("⟲", "Rotate selected pages left", lambda: self.rotate(-90)),
+                              ("⟳", "Rotate selected pages right", lambda: self.rotate(90))):
+            b = QPushButton(text)
+            b.setToolTip(tr(tip))
+            b.clicked.connect(fn)
+            bar.addWidget(b)
+        dele = QPushButton(tr("🗑 Delete"))
+        dele.setToolTip(tr("Remove the selected pages (Delete)"))
+        dele.clicked.connect(self.delete)
+        bar.addWidget(dele)
+        QShortcut(QKeySequence(Qt.Key_Delete), self, activated=self.delete)
+        if len(self.srcs) > 1:
+            by_name = QPushButton(tr("Sort files by name"))
+            by_name.clicked.connect(self.sort_by_name)
+            bar.addWidget(by_name)
+        bar.addSpacing(14)
+        bar.addWidget(QLabel(tr("Select pages")))
+        self.range = QLineEdit()
+        self.range.setPlaceholderText(tr("e.g. 1-3, 7"))
+        self.range.setFixedWidth(130)
+        self.range.returnPressed.connect(self.select_range)
+        bar.addWidget(self.range)
+        bar.addStretch(1)
+        self.count = QLabel()
+        self.count.setObjectName("dim")
+        bar.addWidget(self.count)
+        self.body.addLayout(bar)
+
+        self.extract_btn = QPushButton(tr("Save selected only"))
+        self.extract_btn.setToolTip(tr("New PDF with just the selected pages (extract)"))
+        self.extract_btn.clicked.connect(self.save_selection)
+        self.body.addLayout(self.footer("Save PDF", self.save, self.reload, [self.extract_btn]))
+        self.grid.itemSelectionChanged.connect(self._update_count)
+        self.grid.model().rowsMoved.connect(lambda *_: self._renumber())
+        self.reload()
+
+    # ------------------------------------------------------------ pages
+    def reload(self):
+        from PySide6.QtWidgets import QListWidgetItem
+        self.grid.clear()
+        self.range.clear()
+        self._thumbs: dict[tuple[int, int], QPixmap] = {}
+        refs = imaging.list_pages(self.srcs)
+        placeholder = QPixmap(100, self.THUMB_H)
+        placeholder.fill(QColor(255, 255, 255, 40))
+        for r in refs:
+            it = QListWidgetItem(QIcon(placeholder), "")
+            it.setData(Qt.UserRole, r)
+            it.setTextAlignment(Qt.AlignHCenter | Qt.AlignTop)
+            self.grid.addItem(it)
+        self._renumber()
+        srcs, h = list(self.srcs), self.THUMB_H
+
+        def render():
+            return [(r.src, r.page, imaging.page_thumbnail(srcs[r.src], r.page, h)) for r in refs]
+
+        def show(thumbs):
+            for s, pg, im in thumbs:
+                self._thumbs[(s, pg)] = QPixmap.fromImage(qimage_from_pil(im))
+            for i in range(self.grid.count()):
+                self._paint_item(self.grid.item(i))
+        run_in_background(render, show, lambda msg: self.count.setText(msg))
+
+    def _paint_item(self, it):
+        r: imaging.PageRef = it.data(Qt.UserRole)
+        pm = self._thumbs.get((r.src, r.page))
+        if pm is None:
+            return
+        if r.rotate % 360:
+            from PySide6.QtGui import QTransform
+            pm = pm.transformed(QTransform().rotate(r.rotate), Qt.SmoothTransformation)
+        it.setIcon(QIcon(pm))
+
+    def _items(self, selected_only=False):
+        rows = range(self.grid.count())
+        items = [self.grid.item(i) for i in rows]
+        return [it for it in items if it.isSelected()] if selected_only else items
+
+    def _renumber(self):
+        multi = len(self.srcs) > 1
+        for i, it in enumerate(self._items()):
+            r: imaging.PageRef = it.data(Qt.UserRole)
+            label = f"{i + 1}"
+            if multi:
+                label += f"\n{Path(self.srcs[r.src]).stem[:16]} · p{r.page + 1}"
+            it.setText(label)
+        self._update_count()
+
+    def _update_count(self):
+        n, sel = self.grid.count(), len(self.grid.selectedItems())
+        txt = plural(n, "{n} page", "{n} pages")
+        if sel:
+            txt += " · " + plural(sel, "{n} selected", "{n} selected")
+        self.count.setText(txt)
+        self.extract_btn.setEnabled(sel > 0)
+        if self.primary_btn is not None:
+            self.primary_btn.setEnabled(n > 0)
+
+    def rotate(self, d: int):
+        for it in self._items(True):
+            r: imaging.PageRef = it.data(Qt.UserRole)
+            it.setData(Qt.UserRole, imaging.PageRef(r.src, r.page, (r.rotate + d) % 360))
+            self._paint_item(it)
+
+    def delete(self):
+        for it in self._items(True):
+            self.grid.takeItem(self.grid.row(it))
+        self._renumber()
+
+    def sort_by_name(self):
+        items = [self.grid.takeItem(0) for _ in range(self.grid.count())]
+        items.sort(key=lambda it: (Path(self.srcs[it.data(Qt.UserRole).src]).name.lower(),
+                                   it.data(Qt.UserRole).page))
+        for it in items:
+            self.grid.addItem(it)
+        self._renumber()
+
+    def select_range(self):
+        try:
+            idx = imaging.parse_page_ranges(self.range.text(), self.grid.count())
+        except UserError as e:
+            self.count.setText(tr(str(e)))
+            return
+        self.grid.clearSelection()
+        for i in idx:
+            self.grid.item(i).setSelected(True)
+        if idx:
+            self.grid.scrollToItem(self.grid.item(idx[0]))
+
+    # ------------------------------------------------------------ save
+    def _save(self, refs, label, working, action="tool:Organize"):
+        srcs = list(self.srcs)
+        fn = lambda: [imaging.build_pdf(srcs, refs, label)]
+        if self.submit is not None:
+            self.submit(action, srcs, fn, tr(working))
+        else:
+            self.notify(action, srcs, fn())
+
+    def save(self):
+        refs = [it.data(Qt.UserRole) for it in self._items()]
+        self._save(refs, "Merged" if len(self.srcs) > 1 else "Organized", "Saving PDF…")
+        self.close()
+
+    def save_selection(self):
+        """Keeps the window open: you can extract several page sets in a row."""
+        refs = [it.data(Qt.UserRole) for it in self._items(True)]
+        if refs:
+            self._save(refs, "Extracted", "Saving pages…", "tool:ExtractPages")

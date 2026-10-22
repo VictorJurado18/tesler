@@ -40,6 +40,10 @@ def plural(n: int, one: str, many: str, **kw) -> str:
     return tr(one if n == 1 else many, n=n, **kw)
 
 
+# Rename patterns: the braces here are tokens the user types ({nome}, {data}), not format fields
+TOKEN_STRINGS = {"{name} {n}", "{date} {name}", "{date} {n}",
+                 "{name} = current name · {n} = number · {date} = photo date or modified date"}
+
 PT: dict[str, str] = {
     # ---------------------------------------------------------------- tray / app
     "Enabled": "Ativado",
@@ -430,6 +434,39 @@ PT: dict[str, str] = {
         "Este arquivo não parece ser um vídeo ou áudio que o DragShift consiga ler.",
     "This file has no video.": "Este arquivo não tem vídeo.",
     "This file has no audio.": "Este arquivo não tem áudio.",
+
+    # batch rename
+    "Rename": "Renomear",
+    "Rename all with a pattern": "Renomear todos com um padrão",
+    "Rename files": "Renomear arquivos",
+    "New name": "Novo nome",
+    "{name} {n}": "{nome} {n}",
+    "Photo {n}": "Foto {n}",
+    "{date} {name}": "{data} {nome}",
+    "{date} {n}": "{data} {n}",
+    "{name} = current name · {n} = number · {date} = photo date or modified date":
+        "{nome} = nome atual · {n} = número · {data} = data da foto ou de modificação",
+    "Start at": "Começar em",
+    "Order": "Ordem",
+    "Current order": "Ordem atual",
+    "By name": "Por nome",
+    "By date (photo taken / modified)": "Por data (foto / modificação)",
+    "Current name": "Nome atual",
+    "{n} name(s) can't be used: {why}": "{n} nome(s) não pode(m) ser usado(s): {why}",
+    "{n} file will be renamed": "{n} arquivo será renomeado",
+    "{n} files will be renamed": "{n} arquivos serão renomeados",
+    "empty name": "nome vazio",
+    'not allowed: < > : " / \\ | ? *': 'não é permitido: < > : " / \\ | ? *',
+    "reserved name": "nome reservado do Windows",
+    "name too long": "nome longo demais",
+    "duplicate name": "nome repetido",
+    "a file with this name already exists": "já existe um arquivo com esse nome",
+    "Some names can't be used. Fix the ones marked in red.": "Alguns nomes não podem ser usados. Corrija os marcados em vermelho.",
+    "Renamed {n} file": "{n} arquivo renomeado",
+    "Renamed {n} files": "{n} arquivos renomeados",
+    "Renamed {n} file back": "{n} arquivo voltou ao nome original",
+    "Renamed {n} files back": "{n} arquivos voltaram ao nome original",
+    "Couldn't undo": "Não foi possível desfazer",
 
     # unlock
     "Unlock": "Tirar senha",

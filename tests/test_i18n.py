@@ -29,6 +29,8 @@ def test_placeholders_match():
     import re
     ph = lambda s: sorted(re.findall(r"{(\w+)}", s))
     for en, pt in i18n.PT.items():
+        if en in i18n.TOKEN_STRINGS:
+            continue
         assert ph(en) == ph(pt), en
         assert "text" not in ph(en), f"{{text}} clashes with tr(text, ...): {en}"
 

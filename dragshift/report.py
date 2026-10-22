@@ -16,6 +16,7 @@ class Result:
     outs: list[Path]
     srcs: list[Path] = field(default_factory=list)
     good: str = ""     # highlighted figure, e.g. "−75%"
+    undo: object = None  # optional callable: custom undo (e.g. rename back) instead of trashing outs
 
     @property
     def thumb(self) -> Path | None:
@@ -146,6 +147,11 @@ def summarize(action: str, srcs: list, outs: list, extra: str = "") -> Result:
         else:
             label = tr("PDFs merged") if len(srcs) > 1 else tr("Pages organized")
         return Result(label, f"{plural(n or 0, '{n} page', '{n} pages')} · {human_size(after)} · {o0.name}", outs, srcs)
+
+    if name == "Rename":
+        first = f"{srcs[0].name} → {o0.name}" if srcs else o0.name
+        return Result(plural(len(outs), "Renamed {n} file", "Renamed {n} files"),
+                      first + (" …" if len(outs) > 1 else ""), outs, srcs)
 
     if name == "Cutout":
         if len(outs) > 1:

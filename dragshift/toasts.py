@@ -229,6 +229,17 @@ class ToastCard(QWidget):
             self.copied = True
             self.update()
             QTimer.singleShot(1600, self._uncopy)
+        elif name == "Undo" and callable(r.undo):
+            try:
+                n = r.undo()
+            except Exception as e:  # noqa: BLE001
+                self.result = None
+                self.error(tr("Couldn't undo"), tr(str(e)))
+                return
+            self.result = None
+            self.thumb = None
+            self.good = ""
+            self.info(tr("Undone"), plural(n, "Renamed {n} file back", "Renamed {n} files back"), 2500)
         elif name == "Undo":
             n = trash(r.outs)
             self.result = None

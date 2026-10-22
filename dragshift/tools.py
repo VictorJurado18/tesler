@@ -1870,3 +1870,91 @@ class OrganizeWindow(ToolWindow):
         refs = [it.data(Qt.UserRole) for it in self._items(True)]
         if refs:
             self._save(refs, "Extracted", "Saving pages…", "tool:ExtractPages")
+
+
+
+# ================================================================ BATCH RENAME
+class RenameWindow(ToolWindow):
+    tool_name = "Rename"
+    ORDERS = [("current", "Current order"), ("name", "By name"), ("date", "By date (photo taken / modified)")]
+
+    def __init__(self, paths, notify):
+        super().__init__("Rename files", paths, notify, size=(760, 620))
+        from . import renamer
+        self.renamer = renamer
+        g = QGridLayout()
+        g.setHorizontalSpacing(10)
+        g.addWidget(QLabel(tr("New name")), 0, 0)
+        self.pattern = QLineEdit(tr("{name} {n}"))
+        g.addWidget(self.pattern, 0, 1, 1, 3)
+        chips = QHBoxLayout()
+        for preset in (tr("{name} {n}"), tr("Photo {n}"), tr("{date} {name}"), tr("{date} {n}")):
+            b = QPushButton(preset)
+            b.clicked.connect(lambda _=False, t=preset: self.pattern.setText(t))
+            chips.addWidget(b)
+        chips.addStretch(1)
+        g.addLayout(chips, 1, 1, 1, 3)
+        tip = QLabel(tr("{name} = current name · {n} = number · {date} = photo date or modified date"))
+        tip.setObjectName("dim")
+        g.addWidget(tip, 2, 1, 1, 3)
+        g.addWidget(QLabel(tr("Start at")), 3, 0)
+        self.start = QSpinBox()
+        self.start.setRange(0, 999999)
+        self.start.setValue(1)
+        g.addWidget(self.start, 3, 1)
+        g.addWidget(QLabel(tr("Order")), 3, 2)
+        self.order = QComboBox()
+        for v, label in self.ORDERS:
+            self.order.addItem(tr(label), v)
+        g.addWidget(self.order, 3, 3)
+        self.body.addLayout(g)
+
+        self.table = QTableWidget(0, 2)
+        self.table.setHorizontalHeaderLabels([tr("Current name"), tr("New name")])
+        self.table.verticalHeader().setVisible(False)
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.body.addWidget(self.table, 1)
+        self.msg = QLabel()
+        self.msg.setObjectName("dim")
+        self.body.addWidget(self.msg)
+        self.body.addLayout(self.footer("Rename", self.save))
+        self.pattern.textChanged.connect(self.refresh)
+        self.start.valueChanged.connect(self.refresh)
+        self.order.currentIndexChanged.connect(self.refresh)
+        self.refresh()
+
+    def _pairs(self):
+        return self.renamer.plan(self.paths, self.pattern.text(), self.start.value(), 0, self.order.currentData())
+
+    def refresh(self, *_):
+        pairs = self._pairs()
+        bad = self.renamer.problems(pairs)
+        self.table.setRowCount(len(pairs))
+        for i, (old, new) in enumerate(pairs):
+            a, b = QTableWidgetItem(old.name), QTableWidgetItem(new.name)
+            if i in bad:
+                b.setForeground(QColor("#ff8a80"))
+                b.setToolTip(tr(bad[i]))
+            self.table.setItem(i, 0, a)
+            self.table.setItem(i, 1, b)
+        changed = sum(1 for o, n in pairs if o != n)
+        if bad:
+            self.msg.setText(tr("{n} name(s) can't be used: {why}", n=len(bad), why=tr(next(iter(bad.values())))))
+        else:
+            self.msg.setText(plural(changed, "{n} file will be renamed", "{n} files will be renamed"))
+        if self.primary_btn is not None:
+            self.primary_btn.setEnabled(not bad and changed > 0)
+
+    def save(self):
+        pairs = self._pairs()
+        try:
+            done = self.renamer.apply(pairs)
+        except UserError as e:
+            self.msg.setText(tr(str(e)))
+            return
+        renamer = self.renamer
+        olds = [str(o) for n, o in done]
+        news = [str(n) for n, o in done]
+        self.notify("tool:Rename", olds, news, "", undo=lambda: renamer.undo(done))
+        self.close()

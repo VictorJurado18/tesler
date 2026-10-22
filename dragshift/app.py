@@ -32,7 +32,7 @@ IPC_NAME = ipc_name()
 
 GLYPHS = {"Compress": "⇲", "Metadata": "ⓘ", "Redact": "▮", "Crop": "⌗", "Edit": "☼",
           "Annotate": "✎", "Add BG": "▣", "Resize": "⤢", "Split": "✂", "Rotate": "⟳",
-          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚", "Text": "¶", "Unlock": "⚷", "Organize": "▦", "OCR": "⌕", "Cutout": "✂"}
+          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚", "Text": "¶", "Unlock": "⚷", "Organize": "▦", "OCR": "⌕", "Cutout": "✂", "Rename": "✎"}
 
 HINTS = {
     "Compress": "Shrink file size", "Metadata": "View · remove GPS", "Redact": "Hide private info",
@@ -44,6 +44,7 @@ HINTS = {
     "Organize": "Reorder · rotate · delete · extract",
     "OCR": "Make a scan searchable",
     "Cutout": "Remove the background (AI)",
+    "Rename": "Rename all with a pattern",
 }
 FORMAT_HINTS = {"JPG": "Small, universal", "PNG": "Lossless · transparency", "WEBP": "Smallest for web",
                 "HEIC": "iPhone format", "TIFF": "Print · archival", "AVIF": "Next-gen, tiny",
@@ -246,8 +247,9 @@ class DragShiftApp(QObject):
 
     def build_rings(self, paths: list[str]) -> dict[str, list[Item]]:
         cat = category(paths[0])
+        rename = [Item("Rename", GLYPHS["Rename"], key="tool:Rename", hint=HINTS["Rename"])] if len(paths) > 1 else []
         if cat is None:
-            return {"Unsupported": []}
+            return {"Tools": rename} if rename else {"Unsupported": []}
         ext = Path(paths[0]).suffix
         same = [p for p in paths if category(p) == cat]
         convert_items = []
@@ -272,10 +274,16 @@ class DragShiftApp(QObject):
             if lock == "restricted":
                 names = names + ["Unlock"]
             rings["Tools"] = [Item(n, GLYPHS[n], key=f"tool:{n}", hint=HINTS[n]) for n in names]
+        if rename:
+            rings.setdefault("Tools", [])
+            rings["Tools"] = rings["Tools"] + rename
         return rings
 
     # ------------------------------------------------------------ actions
     def run_item(self, item: Item, paths: list[str]):
+        if item.key == "tool:Rename":           # any files, any type
+            self.open_window(tools.RenameWindow(paths, self.notify))
+            return
         cat = category(paths[0])
         paths = [p for p in paths if category(p) == cat]
         kind, name = item.key.split(":", 1)
@@ -459,9 +467,11 @@ class DragShiftApp(QObject):
         job.sig.failed.connect(failed)
         self.pool.start(keep(job))
 
-    def notify(self, action: str, srcs: list, outs: list, extra: str = ""):
+    def notify(self, action: str, srcs: list, outs: list, extra: str = "", undo=None):
         """Called by tool windows after they save."""
-        self.toasts.new().done(report.summarize(action, srcs, outs, extra))
+        r = report.summarize(action, srcs, outs, extra)
+        r.undo = undo
+        self.toasts.new().done(r)
 
     # ------------------------------------------------------------ misc
     def _tray_click(self, reason):
@@ -646,7 +656,7 @@ def selftest() -> int:
                       tools.MetadataWindow(str(src), n), tools.CompressWindow([str(src)], n),
                       tools.ResizeWindow([str(src)], n), tools.ProtectWindow(str(pdf), n),
                       tools.PdfSnipWindow(str(pdf), n), tools.OrganizeWindow([str(pdf)], n),
-                      tools.UnlockWindow(str(pdf), n)):
+                      tools.UnlockWindow(str(pdf), n), tools.RenameWindow([str(src), str(pdf)], n)):
                 w.close()
             ToastStack().info("ok", "ok").dismiss()
             check_text_renders()

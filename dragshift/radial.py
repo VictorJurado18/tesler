@@ -574,15 +574,24 @@ class RadialMenu(QWidget):
             f.setBold(True)
             f.setLetterSpacing(QFont.AbsoluteSpacing, 0.7)
             label = tr(it.label).upper()
-            # longer labels (e.g. Portuguese "REDIMENSIONAR") shrink to fit the petal
-            if QFontMetrics(f).horizontalAdvance(label) > 78:
-                f.setLetterSpacing(QFont.AbsoluteSpacing, 0.2)
+            # fit the petal's real width (narrower when the ring has many slices): wrap a
+            # two-word label onto two lines, then shrink the font (e.g. "REDIMENSIONAR")
+            n = max(1, len(self.items))
+            max_w = min(80.0, 2 * (r + 8) * math.sin(math.pi / n) * 0.9)
+            lines = [label]
+            if QFontMetrics(f).horizontalAdvance(label) > max_w and " " in label:
+                lines = label.split(" ", 1)
+            widest = lambda: max(QFontMetrics(f).horizontalAdvance(ln) for ln in lines)
+            if widest() > max_w:
+                f.setLetterSpacing(QFont.AbsoluteSpacing, 0.1)
                 px = 10
-                while px > 7 and QFontMetrics(f).horizontalAdvance(label) > 78:
+                while px > 7 and widest() > max_w:
                     px -= 1
                     f.setPixelSize(px)
             p.setFont(f)
-            self._text(p, QRectF(pt.x() - 42, pt.y() + 1, 84, 16), label, col, shadow_col)
+            lh = QFontMetrics(f).height()
+            for k, ln in enumerate(lines):
+                self._text(p, QRectF(pt.x() - 45, pt.y() + 1 + k * (lh - 1), 90, 16), ln, col, shadow_col)
         else:
             f.setPixelSize(int(14 + 2 * h))
             f.setBold(True)

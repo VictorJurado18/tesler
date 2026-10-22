@@ -1,3 +1,20 @@
+# DragShift (versão do Victor)
+
+Fork privado de [llamaboi55/DragShift](https://github.com/llamaboi55/DragShift) com interface em português e ferramentas novas.
+
+**Para abrir:** dois cliques em `Iniciar DragShift.bat` (instala sozinho os componentes que faltarem).
+
+| Tipo | Novidades |
+| --- | --- |
+| PDF | **Recortar** trecho → PNG / copiar imagem / **copiar texto** · **Organizar** páginas (reordenar, girar, apagar, extrair) e **Mesclar** na ordem · **OCR** (PDF escaneado vira pesquisável) · **Tirar senha** |
+| Imagens | **Sem fundo** (IA local) · **Texto** (OCR do Windows, copia o texto de prints) |
+| Planilhas | CSV ⇄ XLSX (entende `;` e `1.234,56`) · CSV/XLSX → PDF |
+| Vídeo / áudio | MP4, GIF, MP3, WAV, M4A · **Comprimir** vídeo |
+| Vários arquivos | **Renomear** em lote com padrão (`{nome}`, `{n}`, `{data}`), com desfazer |
+| Geral | Interface PT-BR (Configurações → Idioma) · botão **Copiar** nas notificações |
+
+---
+
 # DragShift
 
 Convert and edit files on **Windows, Mac and Linux** with a liquid-glass radial menu. Start dragging any file, press **Shift**, and drop it on a slice.

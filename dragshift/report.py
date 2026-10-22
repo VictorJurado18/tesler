@@ -156,6 +156,9 @@ def summarize(action: str, srcs: list, outs: list, extra: str = "") -> Result:
             label = tr("PDFs merged") if len(srcs) > 1 else tr("Pages organized")
         return Result(label, f"{plural(n or 0, '{n} page', '{n} pages')} · {human_size(after)} · {o0.name}", outs, srcs)
 
+    if name == "Collage":
+        return Result(tr("Images combined"), f"{_dim_str(dims(o0))} · {human_size(after)} · {o0.name}", outs, srcs)
+
     if name == "Combine":
         rows = _count_rows(o0)
         detail = (plural(rows, "{n} row", "{n} rows") + " · " if rows is not None else "") + o0.name

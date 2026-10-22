@@ -229,3 +229,23 @@ def test_sign_pdf_all_pages(tmp_path):
     out = imaging.sign_pdf(p, sp, None, (0.6, 0.85, 0.9, 0.95))
     d = fitz.open(out)
     assert out.name == "c Signed.pdf" and all(len(pg.get_images()) == 1 for pg in d)
+
+
+def test_collage_layouts(tmp_path):
+    from dragshift import imaging
+    a = Image.new("RGB", (400, 300), "red")
+    b = Image.new("RGB", (200, 300), "blue")
+    c = Image.new("RGB", (300, 300), "green")
+    row = imaging.collage([a, b, c], "row", 10, "white")
+    assert row.size == (400 + 200 + 300 + 40, 320)
+    col = imaging.collage([a, b], "column", 0, "black")
+    assert col.width == 300 and col.height == 225 + 450
+    grid = imaging.collage([a, b, c, a], "grid", 10, "transparent")
+    assert grid.getpixel((0, 0))[3] == 0                       # transparent gap
+    paths = []
+    for i, im in enumerate((a, b)):
+        p = tmp_path / f"{i}.png"
+        im.save(p)
+        paths.append(p)
+    out = imaging.save_collage(paths, "row", 20, "white")
+    assert out.name == "0 Collage file.jpg" and out.exists()

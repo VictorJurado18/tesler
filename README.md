@@ -6,9 +6,9 @@ Fork privado de [llamaboi55/DragShift](https://github.com/llamaboi55/DragShift) 
 
 | Tipo | Novidades |
 | --- | --- |
-| PDF | **Recortar** trecho → PNG / copiar imagem / **copiar texto** · **Organizar** páginas (reordenar, girar, apagar, extrair) e **Mesclar** na ordem · **OCR** (PDF escaneado vira pesquisável) · **Tirar senha** |
-| Imagens | **Sem fundo** (IA local) · **Texto** (OCR do Windows, copia o texto de prints) |
-| Planilhas | CSV ⇄ XLSX (entende `;` e `1.234,56`) · CSV/XLSX → PDF |
+| PDF | **Recortar** trecho → PNG / copiar imagem / **copiar texto** · **Assinar** · **Organizar** páginas (reordenar, girar, apagar, extrair) e **Mesclar** na ordem · **OCR** (PDF escaneado vira pesquisável) · **Comprimir** para tamanho-alvo · tabelas → **Excel** · **Tirar senha** |
+| Imagens | **Sem fundo** (IA local) · **Texto** (OCR do Windows, copia o texto de prints) · **Juntar** (lado a lado / grade) |
+| Planilhas e dados | CSV ⇄ XLSX ⇄ Parquet ⇄ JSON (entende `;` e `1.234,56`) · CSV/XLSX → PDF · **Espiar** (colunas, tipos, vazios) · **Juntar** vários arquivos |
 | Vídeo / áudio | MP4, GIF, MP3, WAV, M4A · **Comprimir** vídeo |
 | Vários arquivos | **Renomear** em lote com padrão (`{nome}`, `{n}`, `{data}`), com desfazer |
 | Geral | Interface PT-BR (Configurações → Idioma) · botão **Copiar** nas notificações |

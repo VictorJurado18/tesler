@@ -544,6 +544,23 @@ PT: dict[str, str] = {
     "This Parquet file couldn't be read.": "Não foi possível ler este arquivo Parquet.",
     "This JSON isn't a table (expected a list of records).": "Este JSON não é uma tabela (esperava uma lista de registros).",
 
+    # collage
+    "Collage": "Juntar",
+    "Collage file": "Colagem",
+    "Side by side or grid": "Lado a lado ou em grade",
+    "Combine images": "Juntar imagens",
+    "Layout": "Disposição",
+    "Side by side": "Lado a lado",
+    "Stacked": "Empilhado",
+    "Grid": "Grade",
+    "White": "Branco",
+    "Transparent": "Transparente",
+    "Spacing": "Espaçamento",
+    "⇄ Reverse order": "⇄ Inverter ordem",
+    "Combining images…": "Juntando imagens…",
+    "Images combined": "Imagens juntadas",
+    "No images.": "Nenhuma imagem.",
+
     # unlock
     "Unlock": "Tirar senha",
     "Unlocked": "Sem senha",

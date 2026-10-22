@@ -32,7 +32,7 @@ IPC_NAME = ipc_name()
 
 GLYPHS = {"Compress": "⇲", "Metadata": "ⓘ", "Redact": "▮", "Crop": "⌗", "Edit": "☼",
           "Annotate": "✎", "Add BG": "▣", "Resize": "⤢", "Split": "✂", "Rotate": "⟳",
-          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚", "Text": "¶", "Unlock": "⚷", "Organize": "▦", "OCR": "⌕", "Cutout": "✂", "Rename": "✎", "Sign": "✍", "Peek": "◉", "Combine": "⊕"}
+          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚", "Text": "¶", "Unlock": "⚷", "Organize": "▦", "OCR": "⌕", "Cutout": "✂", "Rename": "✎", "Sign": "✍", "Peek": "◉", "Combine": "⊕", "Collage": "⊞"}
 
 HINTS = {
     "Compress": "Shrink file size", "Metadata": "View · remove GPS", "Redact": "Hide private info",
@@ -48,6 +48,7 @@ HINTS = {
     "Sign": "Place your signature",
     "Peek": "Columns, types, empty values",
     "Combine": "Stack into one file",
+    "Collage": "Side by side or grid",
 }
 FORMAT_HINTS = {"JPG": "Small, universal", "PNG": "Lossless · transparency", "WEBP": "Smallest for web",
                 "HEIC": "iPhone format", "TIFF": "Print · archival", "AVIF": "Next-gen, tiny",
@@ -265,7 +266,8 @@ class DragShiftApp(QObject):
             convert_items.append(Item(t, key=f"convert:{t}", hint=hint))
         rings: dict[str, list[Item]] = {"Convert": convert_items}
         if cat == "image":
-            rings["Tools"] = [Item(n, GLYPHS[n], key=f"tool:{n}", hint=HINTS[n]) for n in IMAGE_TOOLS]
+            names = IMAGE_TOOLS + (["Collage"] if len(same) > 1 else [])
+            rings["Tools"] = [Item(n, GLYPHS[n], key=f"tool:{n}", hint=HINTS[n]) for n in names]
         elif cat == "sheet":
             rings["Tools"] = [Item("Peek", GLYPHS["Peek"], key="tool:Peek", hint=HINTS["Peek"])]
             if len(same) > 1:
@@ -358,6 +360,9 @@ class DragShiftApp(QObject):
             return
         if name == "Cutout":
             self.remove_backgrounds(paths)
+            return
+        if name == "Collage":
+            self.open_window(tools.CollageWindow(paths, self.notify))
             return
         windows = {"Crop": tools.CropWindow, "Add BG": tools.AddBgWindow, "Annotate": tools.AnnotateWindow,
                    "Redact": tools.RedactWindow, "Edit": tools.EditWindow, "Metadata": tools.MetadataWindow}
@@ -684,7 +689,7 @@ def selftest() -> int:
                       tools.PdfSnipWindow(str(pdf), n), tools.OrganizeWindow([str(pdf)], n),
                       tools.UnlockWindow(str(pdf), n), tools.RenameWindow([str(src), str(pdf)], n),
                       tools.CompressPdfWindow([str(pdf)], n), tools.SignWindow(str(pdf), n),
-                      tools.PeekWindow(str(Path(d) / "n.txt"), n)):
+                      tools.PeekWindow(str(Path(d) / "n.txt"), n), tools.CollageWindow([str(src), str(src)], n)):
                 w.close()
             ToastStack().info("ok", "ok").dismiss()
             check_text_renders()

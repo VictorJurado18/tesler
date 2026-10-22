@@ -796,3 +796,60 @@ def sign_pdf(src: str | Path, signature: str | Path, page: int | None, frac: tup
                             overlay=True, rotate=pg.rotation)
         doc.save(out, garbage=3, deflate=True)
     return out
+
+
+# ---------------------------------------------------------------- collage
+def collage(images: list[Image.Image], layout: str = "row", gap: int = 20, bg: str = "white",
+            max_cell: int = 2000) -> Image.Image:
+    """layout: 'row' (side by side, same height), 'column' (stacked, same width),
+    'grid' (equal cells, each image fitted inside). bg: 'white' | 'black' | 'transparent'."""
+    import math
+    import statistics
+    if not images:
+        raise UserError("No images.")
+    ims = [ImageOps.exif_transpose(im).convert("RGBA") for im in images]
+    fill = {"white": (255, 255, 255, 255), "black": (0, 0, 0, 255), "transparent": (0, 0, 0, 0)}[bg]
+    n = len(ims)
+    if layout == "row":
+        h = int(min(statistics.median(im.height for im in ims), max_cell))
+        ims = [im.resize((max(1, round(im.width * h / im.height)), h), Image.LANCZOS) for im in ims]
+        W = sum(im.width for im in ims) + gap * (n + 1)
+        out = Image.new("RGBA", (W, h + 2 * gap), fill)
+        x = gap
+        for im in ims:
+            out.alpha_composite(im, (x, gap))
+            x += im.width + gap
+        return out
+    if layout == "column":
+        w = int(min(statistics.median(im.width for im in ims), max_cell))
+        ims = [im.resize((w, max(1, round(im.height * w / im.width))), Image.LANCZOS) for im in ims]
+        H = sum(im.height for im in ims) + gap * (n + 1)
+        out = Image.new("RGBA", (w + 2 * gap, H), fill)
+        y = gap
+        for im in ims:
+            out.alpha_composite(im, (gap, y))
+            y += im.height + gap
+        return out
+    cols = math.ceil(math.sqrt(n))
+    rows = math.ceil(n / cols)
+    aspect = statistics.median(im.width / im.height for im in ims)
+    cw = int(min(statistics.median(im.width for im in ims), max_cell // 2))
+    ch = max(1, round(cw / aspect))
+    out = Image.new("RGBA", (cols * cw + gap * (cols + 1), rows * ch + gap * (rows + 1)), fill)
+    for i, im in enumerate(ims):
+        r, c = divmod(i, cols)
+        fit = ImageOps.contain(im, (cw, ch), Image.LANCZOS)
+        x = gap + c * (cw + gap) + (cw - fit.width) // 2
+        y = gap + r * (ch + gap) + (ch - fit.height) // 2
+        out.alpha_composite(fit, (x, y))
+    return out
+
+
+def save_collage(paths: list[str | Path], layout: str, gap: int, bg: str) -> Path:
+    from .convert import open_image
+    im = collage([open_image(p) for p in paths], layout, gap, bg)
+    if bg != "transparent":
+        im = im.convert("RGB")
+    out = sibling(paths[0], "Collage file", ".png" if bg == "transparent" else ".jpg")
+    save_image(im, out, "PNG" if bg == "transparent" else "JPG", quality=92)
+    return out

@@ -2390,3 +2390,84 @@ class PeekWindow(ToolWindow):
             return
         lines = [f"{c['name']}\t{c['type']}" for c in self.info["columns"]]
         QGuiApplication.clipboard().setText("\n".join(lines))
+
+
+# ================================================================ COLLAGE
+class CollageWindow(ToolWindow):
+    tool_name = "Collage"
+    LAYOUTS = [("row", "Side by side"), ("column", "Stacked"), ("grid", "Grid")]
+    BGS = [("white", "White"), ("black", "Black"), ("transparent", "Transparent")]
+
+    def __init__(self, paths, notify):
+        paths = sorted(paths, key=lambda p: Path(p).name.lower())
+        super().__init__("Combine images", paths, notify, size=(900, 760))
+        self.order = [str(p) for p in self.paths]
+        self.thumbs = {p: open_preview(p, 700) for p in self.order}
+        self.preview = QLabel()
+        self.preview.setAlignment(Qt.AlignCenter)
+        self.preview.setMinimumSize(420, 320)
+        self.body.addWidget(self.preview, 1)
+
+        g = QGridLayout()
+        g.setHorizontalSpacing(10)
+        g.addWidget(QLabel(tr("Layout")), 0, 0)
+        row, self.layout_grp = toggle_row([label for _, label in self.LAYOUTS], 0 if len(paths) <= 3 else 2)
+        self.layout_grp.idClicked.connect(lambda _: self.render())
+        g.addLayout(row, 0, 1)
+        g.addWidget(QLabel(tr("Background")), 1, 0)
+        row2, self.bg_grp = toggle_row([label for _, label in self.BGS])
+        self.bg_grp.idClicked.connect(lambda _: self.render())
+        g.addLayout(row2, 1, 1)
+        self.gap = slider(0, 80, 20)
+        self.gap.valueChanged.connect(lambda _: self._timer.start())
+        slider_row(g, 2, "Spacing", self.gap, lambda v: f"{v} px")
+        self.body.addLayout(g)
+
+        rev = QPushButton(tr("⇄ Reverse order"))
+        rev.clicked.connect(self.reverse)
+        self.copy_btn = QPushButton(tr("Copy image"))
+        self.copy_btn.clicked.connect(self.copy)
+        self.body.addLayout(self.footer("Save", self.save, None, [rev, self.copy_btn]))
+        self._timer = QTimer(self, singleShot=True, interval=60, timeout=self.render)
+        self.render()
+
+    def _params(self):
+        return (self.LAYOUTS[self.layout_grp.checkedId()][0], self.gap.value(),
+                self.BGS[self.bg_grp.checkedId()][0])
+
+    def reverse(self):
+        self.order.reverse()
+        self.render()
+
+    def render(self):
+        layout, gap, bg = self._params()
+        im = imaging.collage([self.thumbs[p] for p in self.order], layout, max(0, gap // 3), bg, max_cell=700)
+        if bg == "transparent":   # show a checkerboard behind transparent results
+            check = Image.new("RGBA", im.size, (200, 200, 200, 255))
+            from PIL import ImageDraw
+            d = ImageDraw.Draw(check)
+            for y in range(0, im.height, 16):
+                for x in range(0, im.width, 16):
+                    if (x // 16 + y // 16) % 2:
+                        d.rectangle((x, y, x + 15, y + 15), fill=(235, 235, 235, 255))
+            check.alpha_composite(im)
+            im = check
+        pm = QPixmap.fromImage(qimage_from_pil(im))
+        self.preview.setPixmap(pm.scaled(self.preview.size() * 0.98, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        if hasattr(self, "_timer"):
+            self._timer.start()
+
+    def copy(self):
+        layout, gap, bg = self._params()
+        im = imaging.collage([open_image(p) for p in self.order], layout, gap, bg)
+        QGuiApplication.clipboard().setImage(qimage_from_pil(im))
+        self.copy_btn.setText(tr("Image copied ✓"))
+        QTimer.singleShot(1400, lambda: self.copy_btn.setText(tr("Copy image")))
+
+    def save(self):
+        layout, gap, bg = self._params()
+        order = list(self.order)
+        self.run(lambda: [imaging.save_collage(order, layout, gap, bg)], "Combining images…")

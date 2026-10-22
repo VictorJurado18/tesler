@@ -383,6 +383,9 @@ def targets_for(cat: str, src_ext: str) -> list[str]:
     if cat == "sheet":
         from .sheets import targets
         return targets("." + src_ext)
+    if cat in ("video", "audio"):
+        from .media import targets as media_targets
+        return media_targets(cat, src_ext)
     return {"pdf": PDF_TARGETS, "docx": DOCX_TARGETS, "text": TEXT_TARGETS}.get(cat, [])
 
 
@@ -404,4 +407,7 @@ def convert(src: str | Path, cat: str, target: str) -> list[Path]:
     if cat == "sheet":
         from .sheets import convert_sheet
         return convert_sheet(src, target)
+    if cat in ("video", "audio"):
+        from .media import convert_media
+        return convert_media(src, cat, target)
     raise ValueError(f"Can't convert {cat} to {target}")

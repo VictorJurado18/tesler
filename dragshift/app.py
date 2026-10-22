@@ -49,7 +49,8 @@ FORMAT_HINTS = {"JPG": "Small, universal", "PNG": "Lossless · transparency", "W
                 "HEIC": "iPhone format", "TIFF": "Print · archival", "AVIF": "Next-gen, tiny",
                 "BMP": "Uncompressed", "PDF": "Document", "ICO": "Windows icon", "GIF": "Legacy web",
                 "DOCX": "Editable Word", "TXT": "Plain text", "XLSX": "Excel spreadsheet",
-                "CSV": "Comma/semicolon text"}
+                "CSV": "Comma/semicolon text", "MP4": "Plays everywhere", "MP3": "Audio only",
+                "WAV": "Uncompressed audio", "M4A": "Apple / small audio"}
 
 IMAGE_TOOLS = ["Compress", "Resize", "Crop", "Edit", "Annotate", "Redact", "Cutout", "Add BG", "Text", "Metadata"]
 PDF_TOOLS = ["Snip", "Organize", "OCR", "Compress", "Split", "Rotate", "Protect", "Extract", "Metadata"]
@@ -258,6 +259,11 @@ class DragShiftApp(QObject):
         rings: dict[str, list[Item]] = {"Convert": convert_items}
         if cat == "image":
             rings["Tools"] = [Item(n, GLYPHS[n], key=f"tool:{n}", hint=HINTS[n]) for n in IMAGE_TOOLS]
+        elif cat == "video":
+            rings["Tools"] = [Item("Compress", GLYPHS["Compress"], key="tool:Compress", hint=tr("Smaller MP4 (720p)"))]
+            for it in convert_items:
+                if it.label == "GIF":
+                    it.hint = tr("First {n} s, 640 px", n=20)
         elif cat == "pdf":
             lock = imaging.pdf_lock_state(paths[0])
             if lock == "password":   # nothing else works until the password is removed
@@ -273,6 +279,9 @@ class DragShiftApp(QObject):
         cat = category(paths[0])
         paths = [p for p in paths if category(p) == cat]
         kind, name = item.key.split(":", 1)
+        if cat in ("video", "audio"):
+            self.run_media(kind, name, cat, paths)
+            return
         if kind == "convert":
             if cat == "image" and name == "PDF" and len(paths) > 1:
                 self.submit(f"convert:{name}", paths, lambda: convert.images_to_single_pdf(paths),
@@ -356,6 +365,30 @@ class DragShiftApp(QObject):
                                             preview=preview[:90] + ("…" if len(preview) > 90 else "")), 6000)
 
         tools.run_in_background(work, done, lambda msg: card.error(tr("Couldn't read the text"), msg))
+
+    def run_media(self, kind: str, name: str, cat: str, paths: list[str]):
+        """ffmpeg jobs: can take a while, so the card shows a percentage."""
+        from . import media
+        card = self.toasts.new()
+        verb = tr("Compressing video…") if kind == "tool" else tr("Converting to {name}…", name=name)
+        card.working(verb, Path(paths[0]).name if len(paths) == 1 else tr("{n} files", n=len(paths)))
+        relay = _Progress()
+        relay.changed.connect(lambda t, d: card.working(t, d))
+        action = "tool:Compress" if kind == "tool" else f"convert:{name}"
+
+        def work():
+            outs = []
+            for i, p in enumerate(paths):
+                prefix = f"{i + 1}/{len(paths)} · " if len(paths) > 1 else ""
+                cb = lambda f, prefix=prefix, p=p: relay.changed.emit(verb, f"{prefix}{f * 100:.0f}% · {Path(p).name}")
+                if kind == "tool":
+                    outs += media.compress_video(p, cb)
+                else:
+                    outs += media.convert_media(p, cat, name, cb)
+            return outs
+
+        tools.run_in_background(work, lambda outs: card.done(report.summarize(action, paths, outs)),
+                                lambda msg: card.error(tr("Couldn't finish"), msg))
 
     def remove_backgrounds(self, paths: list[str]):
         """AI cut-out → transparent PNGs. The model is downloaded once (progress in the card)."""

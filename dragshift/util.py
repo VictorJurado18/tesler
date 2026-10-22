@@ -22,6 +22,11 @@ def category(path: str | Path) -> str | None:
         return "docx"
     if ext in SHEET_EXTS:
         return "sheet"
+    from .media import AUDIO_EXTS, VIDEO_EXTS
+    if ext in VIDEO_EXTS:
+        return "video"
+    if ext in AUDIO_EXTS:
+        return "audio"
     if ext in TEXT_EXTS:
         return "text"
     return None

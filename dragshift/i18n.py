@@ -408,13 +408,28 @@ PT: dict[str, str] = {
     "The downloaded model is corrupted. Try again.": "O modelo baixado veio corrompido. Tente de novo.",
 
     # spreadsheets
-    "Images · PDF · Word · Excel · Text": "Imagens · PDF · Word · Excel · Texto",
-    "Excel spreadsheet": "Planilha do Excel",
+        "Excel spreadsheet": "Planilha do Excel",
     "Comma/semicolon text": "Texto separado por ;",
     "This spreadsheet couldn't be opened (is it password-protected?).":
         "Não foi possível abrir esta planilha (ela tem senha?).",
     "This spreadsheet is empty.": "Esta planilha está vazia.",
     "This file is empty.": "Este arquivo está vazio.",
+
+    # video / audio
+    "Images · PDF · Office · Video · Audio": "Imagens · PDF · Office · Vídeo · Áudio",
+    "Plays everywhere": "Toca em qualquer lugar",
+    "Audio only": "Só o áudio",
+    "Uncompressed audio": "Áudio sem compressão",
+    "Apple / small audio": "Áudio leve (Apple)",
+    "Smaller MP4 (720p)": "MP4 menor (720p)",
+    "First {n} s, 640 px": "Primeiros {n} s, 640 px",
+    "Compressing video…": "Comprimindo vídeo…",
+    "The video component isn't installed yet. Open DragShift with “Iniciar DragShift.bat” once to install it.":
+        "O componente de vídeo ainda não está instalado. Abra o DragShift uma vez pelo “Iniciar DragShift.bat” para instalar.",
+    "This file doesn't look like a video or audio DragShift can read.":
+        "Este arquivo não parece ser um vídeo ou áudio que o DragShift consiga ler.",
+    "This file has no video.": "Este arquivo não tem vídeo.",
+    "This file has no audio.": "Este arquivo não tem áudio.",
 
     # unlock
     "Unlock": "Tirar senha",

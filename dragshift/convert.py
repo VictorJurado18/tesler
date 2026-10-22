@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import io
 import sys
+import traceback
 from pathlib import Path
 
 from PIL import Image, ImageOps
@@ -279,18 +280,34 @@ def _word_to_pdf(src: Path, out: Path) -> bool:
     if sys.platform != "win32":
         return False
     try:
+        import pythoncom  # type: ignore
         import win32com.client  # type: ignore
-        word = win32com.client.DispatchEx("Word.Application")
-        word.Visible = False
-        try:
-            doc = word.Documents.Open(str(src.resolve()), ReadOnly=True)
-            doc.SaveAs(str(out.resolve()), FileFormat=17)  # wdFormatPDF
-            doc.Close(False)
-        finally:
-            word.Quit()
-        return out.exists()
     except Exception:
         return False
+    # runs on a worker thread: COM must be initialised per thread, otherwise Word
+    # calls fail with RPC errors (0x800706BA / 0x800706BE) and can crash the app
+    pythoncom.CoInitialize()
+    word = None
+    try:
+        word = win32com.client.DispatchEx("Word.Application")
+        word.Visible = False
+        word.DisplayAlerts = 0
+        doc = word.Documents.Open(str(src.resolve()), ReadOnly=True, AddToRecentFiles=False)
+        try:
+            doc.SaveAs2(str(out.resolve()), FileFormat=17)  # wdFormatPDF
+        finally:
+            doc.Close(False)
+        return out.exists()
+    except Exception:
+        traceback.print_exc()
+        return False
+    finally:
+        if word is not None:
+            try:
+                word.Quit()
+            except Exception:
+                pass
+        pythoncom.CoUninitialize()
 
 
 CSS = """

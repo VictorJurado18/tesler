@@ -238,10 +238,99 @@ QMenu::indicator {{ width: 14px; height: 14px; }}
 """
 
 
+_QSS_CLASSIC = f"""
+* {{ color: {TEXT}; font-family: "@FONT@", sans-serif; font-size: 10pt; }}
+QWidget#glassRoot {{ background: transparent; }}
+QLabel#title {{ font-size: 11pt; font-weight: 600; }}
+QLabel#dim, QLabel.dim {{ color: {TEXT_DIM}; font-size: 9pt; }}
+QLabel#section {{ color: {TEXT_DIM}; font-size: 8.5pt; font-weight: 600; letter-spacing: 1px; }}
+QPushButton {{
+  background: rgba(255,255,255,0.13); border: 1px solid rgba(255,255,255,0.30);
+  border-top-color: rgba(255,255,255,0.55); border-bottom-color: rgba(255,255,255,0.16);
+  border-radius: 15px; padding: 6px 15px; min-height: 18px;
+}}
+QPushButton:hover {{ background: rgba(255,255,255,0.22); }}
+QPushButton:pressed {{ background: rgba(255,255,255,0.08); }}
+QPushButton:checked {{
+  background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 rgba(255,138,92,0.85), stop:1 rgba(255,79,139,0.85));
+  border: 1px solid rgba(255,255,255,0.55);
+}}
+QPushButton#primary {{
+  background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 {ACCENT_A}, stop:0.55 {ACCENT_B}, stop:1 {ACCENT_C});
+  border: 1px solid rgba(255,255,255,0.55); border-top-color: rgba(255,255,255,0.9);
+  font-weight: 600; padding: 7px 20px; border-radius: 16px;
+}}
+QPushButton#primary:hover {{ border: 1px solid #ffffff; }}
+QPushButton#chrome {{ background: transparent; border: none; padding: 2px 8px; font-size: 11pt; border-radius: 6px; }}
+QPushButton#chrome:hover {{ background: rgba(255,80,100,0.6); }}
+QPushButton#swatch {{ border-radius: 12px; padding: 0; min-width: 24px; max-width: 24px; min-height: 24px; max-height: 24px; }}
+QPushButton#swatch:checked {{ border: 2px solid #ffffff; }}
+QSlider::groove:horizontal {{ height: 4px; background: rgba(255,255,255,0.22); border-radius: 2px; }}
+QSlider::sub-page:horizontal {{
+  background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 {ACCENT_A}, stop:0.5 {ACCENT_B}, stop:1 {ACCENT_C}); border-radius: 2px;
+}}
+QSlider::handle:horizontal {{
+  background: #ffffff; width: 14px; height: 14px; margin: -6px 0; border-radius: 7px;
+  border: 1px solid rgba(0,0,0,0.15);
+}}
+QSpinBox, QLineEdit, QComboBox {{
+  background: rgba(0,0,0,0.16); border: 1px solid rgba(255,255,255,0.22);
+  border-bottom-color: rgba(255,255,255,0.40);
+  border-radius: 10px; padding: 4px 8px; selection-background-color: {ACCENT_B};
+}}
+QLineEdit:focus, QSpinBox:focus {{ border: 1px solid rgba(255,255,255,0.7); }}
+QFrame#card {{ background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.14); border-radius: 14px; }}
+QLabel#big {{ font-size: 17pt; font-weight: 700; }}
+QLabel#good {{ color: #8dffb8; font-weight: 600; }}
+QLabel#warn {{ color: #ffd36b; font-weight: 600; }}
+QComboBox QAbstractItemView {{ background: #2a2438; border: 1px solid rgba(255,255,255,0.25); }}
+QCheckBox::indicator {{ width: 16px; height: 16px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.5); background: rgba(255,255,255,0.1); }}
+QCheckBox::indicator:checked {{ background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 {ACCENT_A}, stop:1 {ACCENT_B}); }}
+QTableWidget {{ background: rgba(0,0,0,0.12); border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; gridline-color: rgba(255,255,255,0.08); }}
+QHeaderView {{ background: transparent; }}
+QTableCornerButton::section {{ background: transparent; border: none; }}
+QHeaderView::section {{ background: rgba(255,255,255,0.10); border: none; padding: 4px; font-weight: 600; }}
+QScrollBar:vertical {{ background: transparent; width: 8px; }}
+QScrollBar::handle:vertical {{ background: rgba(255,255,255,0.3); border-radius: 4px; min-height: 30px; }}
+QScrollBar::add-line, QScrollBar::sub-line {{ height: 0; }}
+QToolTip {{ background: #2a2438; color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; padding: 4px; }}
+QMenu {{ background: #2a2438; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; padding: 4px; }}
+QMenu::item {{ padding: 6px 18px; border-radius: 5px; }}
+QMenu::item:selected {{ background: rgba(255,255,255,0.15); }}
+"""
+
+_QSS_CLASSIC_EXTRA = f"""
+QLabel#heading {{ font-size: 13pt; font-weight: 600; }}
+QWidget#segbar {{ background: transparent; border: none; }}
+QPushButton#seg {{ border-radius: 15px; padding: 6px 15px; }}
+QPushButton#seg:checked {{
+  background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 rgba(255,138,92,0.85), stop:1 rgba(255,79,139,0.85));
+  border: 1px solid rgba(255,255,255,0.55);
+}}
+QWidget#tabbar {{ background: transparent; border: none; }}
+QPushButton#tab {{ border-radius: 15px; padding: 6px 15px; }}
+QPushButton#tab:checked {{
+  background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 rgba(255,138,92,0.85), stop:1 rgba(255,79,139,0.85));
+  border: 1px solid rgba(255,255,255,0.55);
+}}
+QPushButton#subtle {{ background: transparent; border: 1px solid transparent; }}
+QPushButton#chromeClose {{ background: transparent; border: none; padding: 2px 8px; border-radius: 6px; }}
+QPushButton#chromeClose:hover {{ background: rgba(255,80,100,0.6); }}
+QFrame#footer {{ background: transparent; border: none; }}
+QDoubleSpinBox {{
+  background: rgba(0,0,0,0.16); border: 1px solid rgba(255,255,255,0.22);
+  border-bottom-color: rgba(255,255,255,0.40); border-radius: 10px; padding: 4px 8px;
+}}
+QListWidget {{ background: rgba(0,0,0,0.12); border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; }}
+"""
+
+
 def qss() -> str:
-    """The stylesheet, with font families that are really installed (see util.ui_family)."""
+    """The stylesheet for the chosen look, with font families that are really installed."""
+    from . import theme
     from .util import ui_family
-    return _build_qss().replace("@FONT@", ui_family(False)).replace("@DISPLAY@", ui_family(True))
+    css = (_QSS_CLASSIC + _QSS_CLASSIC_EXTRA) if theme.classic() else _build_qss()
+    return css.replace("@FONT@", ui_family(False)).replace("@DISPLAY@", ui_family(True))
 
 
 def __getattr__(name):        # keep `glass.QSS` working

@@ -12,8 +12,8 @@ from pathlib import Path
 
 from PySide6.QtCore import (QEasingCurve, QFile, QRect, QRectF, Qt, QTimer, QUrl,
                             QVariantAnimation, Signal)
-from PySide6.QtGui import (QCursor, QDesktopServices, QFont, QFontMetrics,
-                           QGuiApplication, QPainter, QPainterPath, QPixmap)
+from PySide6.QtGui import (QColor, QCursor, QDesktopServices, QFont, QFontMetrics,
+                           QGuiApplication, QPainter, QPainterPath, QPen, QPixmap)
 from PySide6.QtWidgets import QWidget
 
 from . import glass, icons, theme
@@ -22,6 +22,7 @@ from .report import Result
 from .i18n import plural, tr
 
 W, H = 440, 104
+CW, CH = 420, 104     # classic (liquid glass) card
 GAP = 12
 MARGIN = 18
 HEIGHTS = {"working": 96, "done": 132, "error": 92, "info": 76}
@@ -96,6 +97,12 @@ class ToastCard(QWidget):
         self.resize(W, H)
         self.progress: float | None = None     # 0..1 when a job reports it, else indeterminate
         self._native = False
+        self.classic = theme.classic()
+        if self.classic:
+            from .liquid import GlassStyle
+            self.setAttribute(Qt.WA_TranslucentBackground)
+            self.liquid = glass.LiquidBacking(self, 20, GlassStyle(blur=8, strength=12, bezel=16))
+            self.liquid.changed.connect(self.update)
         self.state = "working"     # working | done | error | info
         self.copied = False
         self.title = ""
@@ -115,6 +122,8 @@ class ToastCard(QWidget):
 
     # ------------------------------------------------------------ state
     def height_for_state(self) -> int:
+        if self.classic:
+            return CH
         h = HEIGHTS.get(self.state, H)
         if self.state == "done" and not (self.result and self.result.outs):
             h = HEIGHTS["info"]
@@ -142,7 +151,8 @@ class ToastCard(QWidget):
         if r.thumb is not None:
             pm = QPixmap(str(r.thumb))
             if not pm.isNull():
-                self.thumb = pm.scaled(112, 112, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
+                k = 64 if self.classic else 112
+                self.thumb = pm.scaled(k, k, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
         self.life.start(6500)
         self._restack()
 
@@ -169,6 +179,14 @@ class ToastCard(QWidget):
 
     def appear(self, rect: QRect):
         self.setGeometry(rect)
+        if self.classic:
+            glass.apply_shape(self, glass.rounded_rect_path(QRectF(0, 0, CW, CH), 20))
+            self.liquid.capture_at(rect)
+            self.setWindowOpacity(0.0)
+            self.show()
+            self.liquid.excluded = glass.exclude_from_capture(int(self.winId()))
+            self.fade.start()
+            return
         self.setWindowOpacity(0.0)
         self.show()
         if not self._native:
@@ -178,6 +196,11 @@ class ToastCard(QWidget):
     def relocate(self, rect: QRect):
         if rect != self.geometry():
             self.setGeometry(rect)
+            if self.classic:
+                if self.liquid.excluded:
+                    self.liquid.refresh()
+                else:
+                    self.liquid.image = None
         self.update()
 
     def dismiss(self):
@@ -210,7 +233,7 @@ class ToastCard(QWidget):
             self.update()
 
     def mouseReleaseEvent(self, e):
-        if QRectF(W - 40, 8, 30, 30).contains(e.position()):
+        if QRectF(self.width() - 40, 8, 34, 30).contains(e.position()):
             self.dismiss()
             return
         for name, r in self.buttons:
@@ -261,6 +284,8 @@ class ToastCard(QWidget):
 
     # ------------------------------------------------------------ paint
     def paintEvent(self, e):
+        if self.classic:
+            return self._c_paintEvent(e)
         t = theme.current()
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
@@ -401,6 +426,118 @@ class ToastCard(QWidget):
         return tr("Saved in a “DragShift” subfolder") if CONFIG.get("output") == "folder" else tr("Saved next to the original")
 
 
+    # ------------------------------------------------------------ classic paint
+    def _c_paintEvent(self, e):
+        """The classic look: liquid glass card."""
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setRenderHint(QPainter.TextAntialiasing)
+        r = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        path = glass.rounded_rect_path(r, 20)
+        img = self.liquid.image
+        err = self.state == "error"
+        if img is not None and not img.isNull() and img.size() == self.size():
+            p.drawImage(0, 0, img)
+            tint = QColor(140, 30, 50, 150) if err else QColor(20, 16, 32, 120)
+        else:
+            tint = QColor(120, 30, 45, 230) if err else QColor(34, 27, 52, 232)
+        glass.paint_glass(p, path, tint=tint, rainbow_alpha=170)
+
+        x = 16
+        # leading visual: spinner / thumbnail / icon
+        lead = QRectF(14, (CH - 56) / 2 - 8, 56, 56)
+        if self.state == "working":
+            p.setPen(QPen(QColor(255, 255, 255, 50), 4))
+            p.drawEllipse(lead.center(), 16, 16)
+            p.setPen(glass.iridescent_pen(lead.center(), 4, 255, angle=-self.spin))
+            p.drawArc(QRectF(lead.center().x() - 16, lead.center().y() - 16, 32, 32), int(-self.spin * 16), 100 * 16)
+            x = 82
+        elif self.thumb is not None:
+            clip = QPainterPath()
+            clip.addRoundedRect(lead, 12, 12)
+            p.save()
+            p.setClipPath(clip)
+            p.drawPixmap(lead.toRect(), self.thumb,
+                         QRect((self.thumb.width() - 64) // 2, (self.thumb.height() - 64) // 2, 64, 64))
+            p.restore()
+            p.setPen(QPen(QColor(255, 255, 255, 110), 1))
+            p.drawRoundedRect(lead, 12, 12)
+            x = 82
+        else:
+            icon = {"done": "✓", "error": "!", "info": "↺"}.get(self.state, "✓")
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor(255, 255, 255, 34))
+            p.drawEllipse(lead.center(), 22, 22)
+            f = QFont(ui_family(False))
+            f.setPixelSize(22)
+            f.setBold(True)
+            p.setFont(f)
+            p.setPen(QColor("#8dffb8") if self.state == "done" else QColor("#ffd36b") if err else QColor(255, 255, 255))
+            p.drawText(QRectF(lead.center().x() - 22, lead.center().y() - 22, 44, 44), Qt.AlignCenter, icon)
+            x = 82
+
+        tw = CW - x - 34
+        f = QFont(ui_family(True))
+        f.setPixelSize(15)
+        f.setBold(True)
+        p.setFont(f)
+        fm = QFontMetrics(f)
+        title = fm.elidedText(self.title, Qt.ElideRight, int(tw))
+        p.setPen(QColor(255, 255, 255))
+        p.drawText(QRectF(x, 13, tw, 20), Qt.AlignLeft | Qt.AlignVCenter, title)
+        # highlighted figure chip (e.g. "75% smaller")
+        if self.good:
+            gx = x + fm.horizontalAdvance(title) + 8
+            f2 = QFont(ui_family(False))
+            f2.setPixelSize(11)
+            f2.setBold(True)
+            fm2 = QFontMetrics(f2)
+            gw = fm2.horizontalAdvance(self.good) + 14
+            if gx + gw < CW - 34:
+                chip = QRectF(gx, 14, gw, 18)
+                p.setPen(Qt.NoPen)
+                p.setBrush(QColor(80, 220, 140, 70))
+                p.drawRoundedRect(chip, 9, 9)
+                p.setFont(f2)
+                p.setPen(QColor("#a8ffc9"))
+                p.drawText(chip, Qt.AlignCenter, self.good)
+        f.setPixelSize(12)
+        f.setBold(False)
+        p.setFont(f)
+        p.setPen(QColor(255, 255, 255, 200))
+        p.drawText(QRectF(x, 35, tw + 18, 34), Qt.AlignLeft | Qt.AlignTop | Qt.TextWordWrap,
+                   QFontMetrics(f).elidedText(self.detail, Qt.ElideMiddle, int(tw * 1.9)))
+
+        # close ×
+        f.setPixelSize(13)
+        p.setFont(f)
+        p.setPen(QColor(255, 255, 255, 150))
+        p.drawText(QRectF(CW - 30, 6, 24, 24), Qt.AlignCenter, "✕")
+
+        # action buttons
+        self.buttons = []
+        if self.state == "done" and self.result and self.result.outs:
+            names = ["Open", "Copy", "Show", "Undo"]
+            labels = {"Open": tr("Open"), "Copy": tr("Copied ✓") if self.copied else tr("Copy"),
+                      "Show": tr("Show in folder"), "Undo": tr("Undo")}
+            f.setPixelSize(12)
+            f.setBold(True)
+            p.setFont(f)
+            fm = QFontMetrics(f)
+            bx = x
+            for i, nme in enumerate(names):
+                bw = fm.horizontalAdvance(labels[nme]) + 22
+                br = QRectF(bx, CH - 32, bw, 22)
+                self.buttons.append((nme, br))
+                p.setPen(QPen(QColor(255, 255, 255, 120 if self.hover_btn == i else 60), 1))
+                p.setBrush(QColor(255, 255, 255, 60 if self.hover_btn == i else 26))
+                p.drawRoundedRect(br, 11, 11)
+                p.setPen(QColor(255, 255, 255))
+                p.drawText(br, Qt.AlignCenter, labels[nme])
+                bx += bw + 6
+
+
+
 class ToastStack:
     """Owns the cards and keeps them stacked bottom-right of the active screen."""
 
@@ -414,14 +551,15 @@ class ToastStack:
     def _slot(self, i: int, h: int | None = None) -> QRect:
         """Newest card at the bottom; each older one sits above, whatever its height."""
         g = self._screen_rect()
-        x = g.right() - W - MARGIN
+        w = CW if theme.classic() else W
+        x = g.right() - w - MARGIN
         y = g.bottom() - MARGIN
         heights = [c.height_for_state() for c in self.cards]
         if h is not None:
             heights[i] = h
         below = sum(heights[i + 1:]) + GAP * (len(heights) - 1 - i)
         hi = heights[i]
-        return QRect(x, y - below - hi, W, hi)
+        return QRect(x, y - below - hi, w, hi)
 
     def new(self) -> ToastCard:
         c = ToastCard(self)

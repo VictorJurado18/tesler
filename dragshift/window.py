@@ -29,10 +29,17 @@ class GlassWindow(QWidget):
         self.resize(*size)
         self._drag: QPoint | None = None
         self._native = False
-        self.radius = 8
+        self.classic = theme.classic()
+        self.radius = 18 if self.classic else 8
+        self._acrylic = False
+        self.liquid = None
+        if self.classic:   # the original liquid-glass window: translucent, refracts what's behind
+            self.setAttribute(Qt.WA_TranslucentBackground)
+            self.liquid = glass.LiquidBacking(self, self.radius)
+            self.liquid.changed.connect(self.update)
 
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(1, 1, 1, 1)
+        outer.setContentsMargins(*((8, 4, 8, 8) if self.classic else (1, 1, 1, 1)))
         outer.setSpacing(0)
 
         bar = QHBoxLayout()
@@ -103,6 +110,8 @@ class GlassWindow(QWidget):
         self.resize(min(self.width(), scr.width() - 40), min(self.height(), scr.height() - 40))
         self.move(scr.center() - self.rect().center())
         self._placed = True
+        if self.classic:
+            self.liquid.capture_at(self.frameGeometry())
         self.show()
         if sys.platform == "darwin":
             from . import platform_mac
@@ -116,13 +125,36 @@ class GlassWindow(QWidget):
             scr = self.screen().availableGeometry()
             self.move(scr.center() - self.rect().center())
             self._placed = True
-        if not self._native:
+            if self.classic:
+                self.liquid.capture_at(self.frameGeometry())
+        if self.classic:
+            self.liquid.excluded = glass.exclude_from_capture(int(self.winId()))
+        elif not self._native:
             self._native = glass.native_frame(int(self.winId()), theme.current().dark)
+
+    def moveEvent(self, e):
+        super().moveEvent(e)
+        self._stale()
+
+    def _stale(self):
+        """Classic look: the glass shows what was behind; after a move, refresh or fall back."""
+        if not self.classic or not self.isVisible():
+            return
+        if self.liquid.excluded:
+            self.liquid.moved()
+        elif self.liquid.image is not None:
+            self.liquid.image = None
+            if IS_WIN and not self._acrylic:
+                self._acrylic = glass.enable_acrylic(int(self.winId()))
+            self.update()
 
     def resizeEvent(self, e):
         super().resizeEvent(e)
         self.grip.move(self.width() - self.grip.width() - 2, self.height() - self.grip.height() - 2)
         self.grip.raise_()
+        if self.classic:
+            glass.apply_shape(self, glass.rounded_rect_path(QRectF(self.rect()), self.radius))
+            self._stale()
 
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_Escape:
@@ -145,12 +177,33 @@ class GlassWindow(QWidget):
         self._drag = None
 
     def paintEvent(self, e):
+        if self.classic:
+            self._paint_classic()
+            return
         t = theme.current()
         p = QPainter(self)
         p.fillRect(self.rect(), theme.qcolor(t.bg))
         if not self._native:   # no DWM frame (macOS/Linux/screenshots): draw the hairline ourselves
             p.setPen(theme.qcolor(t.stroke))
             p.drawRect(QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5))
+
+
+def _classic_paint(self):
+    """The original look: liquid glass over a capture of the screen behind the window."""
+    p = QPainter(self)
+    p.setRenderHint(QPainter.Antialiasing)
+    r = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+    path = glass.rounded_rect_path(r, self.radius)
+    img = self.liquid.image
+    if img is not None and not img.isNull() and img.size() == self.size():
+        p.drawImage(0, 0, img)
+        glass.paint_glass(p, path, tint=QColor(22, 17, 34, 150), rainbow_alpha=150)
+    else:
+        tint = QColor(30, 24, 44, 125) if self._acrylic else QColor(38, 30, 56, 228)
+        glass.paint_glass(p, path, tint=tint, rainbow_alpha=150)
+
+
+GlassWindow._paint_classic = _classic_paint
 
 
 def app_mark(px: int) -> QPixmap:

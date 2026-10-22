@@ -142,6 +142,16 @@ def build(dark: bool, accent: QColor | None = None) -> Palette:
 
 _current: Palette | None = None
 MODE = "auto"   # "auto" | "dark" | "light" (Settings)
+STYLE = "native"   # "native" (Windows 11) | "classic" (liquid glass, the original look)
+
+
+def set_style(style: str) -> None:
+    global STYLE
+    STYLE = style if style in ("native", "classic") else "native"
+
+
+def classic() -> bool:
+    return STYLE == "classic"
 
 
 def set_mode(mode: str) -> None:
@@ -153,7 +163,8 @@ def set_mode(mode: str) -> None:
 def current() -> Palette:
     global _current
     if _current is None:
-        dark = system_dark() if MODE == "auto" else MODE == "dark"
+        # the classic liquid glass was designed for white text on dark glass
+        dark = True if STYLE == "classic" else (system_dark() if MODE == "auto" else MODE == "dark")
         _current = build(dark)
     return _current
 

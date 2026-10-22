@@ -28,6 +28,7 @@ DEFAULTS = {
     "welcomed": False,
     "language": "auto",
     "theme": "auto",
+    "style": "native",
 }
 
 
@@ -58,6 +59,7 @@ class Settings:
             set_language(self.get("language"))
             from . import theme
             theme.set_mode(self.get("theme"))
+            theme.set_style(self.get("style"))
             i18n_applied[0] = True
 
 
@@ -111,6 +113,7 @@ def set_autostart(on: bool):
 TRIGGERS = ([("shift", "Shift ⇧"), ("ctrl", "Control ⌃"), ("alt", "Option ⌥")] if IS_MAC
             else [("shift", "Shift"), ("ctrl", "Ctrl"), ("alt", "Alt")])
 OUTPUTS = [("next", "Next to the original"), ("folder", "In a “DragShift” subfolder")]
+STYLES = [("native", "Native (Windows 11)"), ("classic", "Liquid glass (classic)")]
 THEMES = [("auto", "Same as Windows"), ("dark", "Dark"), ("light", "Light")]
 DPIS = [(150, "150 dpi · small"), (200, "200 dpi · balanced"), (300, "300 dpi · print")]
 
@@ -119,7 +122,7 @@ class SettingsWindow(GlassWindow):
     changed = Signal()
 
     def __init__(self, settings: Settings):
-        super().__init__(tr("Settings"), size=(560, 600))
+        super().__init__(tr("Settings"), size=(560, 640))
         self.s = settings
         grid = QGridLayout()
         grid.setHorizontalSpacing(14)
@@ -174,6 +177,11 @@ class SettingsWindow(GlassWindow):
         self.lang = combo(LANGUAGES, self.s.get("language"))
         self.lang.currentIndexChanged.connect(lambda _: self._save("language", self.lang.currentData()))
         grid.addWidget(self.lang, r, 1)
+        r += 1
+        grid.addWidget(QLabel(tr("Look")), r, 0)
+        self.style_box = combo(STYLES, self.s.get("style"))
+        self.style_box.currentIndexChanged.connect(lambda _: self._save("style", self.style_box.currentData()))
+        grid.addWidget(self.style_box, r, 1)
         r += 1
         grid.addWidget(QLabel(tr("Theme")), r, 0)
         self.theme = combo(THEMES, self.s.get("theme"))

@@ -564,6 +564,7 @@ PT: dict[str, str] = {
     # redesign
     "Minimize": "Minimizar",
     "flips": "troca",
+    "Look": "Visual", "Native (Windows 11)": "Nativo (Windows 11)", "Liquid glass (classic)": "Vidro líquido (clássico)",
     "Theme": "Tema", "Same as Windows": "Igual ao Windows", "Dark": "Escuro", "Light": "Claro",
     "Arrow": "Seta", "Box": "Caixa", "Circle": "Círculo", "Pen": "Caneta", "Marker": "Marca-texto",
     "Text tool": "Texto", "Step": "Passo", "Flip": "Espelhar", "Delete": "Apagar", "Draw": "Desenhar",

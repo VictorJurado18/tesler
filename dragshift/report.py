@@ -147,6 +147,11 @@ def summarize(action: str, srcs: list, outs: list, extra: str = "") -> Result:
             label = tr("PDFs merged") if len(srcs) > 1 else tr("Pages organized")
         return Result(label, f"{plural(n or 0, '{n} page', '{n} pages')} · {human_size(after)} · {o0.name}", outs, srcs)
 
+    if name == "OCR":
+        n = pages(o0)
+        return Result(tr("Searchable PDF"), f"{plural(n or 0, '{n} page', '{n} pages')} · {o0.name}", outs, srcs,
+                      good=tr("Ctrl+F works"))
+
     if name == "Unlock":
         return Result(tr("Password removed"), o0.name, outs, srcs, good=tr("no password"))
 

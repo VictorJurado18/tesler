@@ -32,7 +32,7 @@ IPC_NAME = ipc_name()
 
 GLYPHS = {"Compress": "⇲", "Metadata": "ⓘ", "Redact": "▮", "Crop": "⌗", "Edit": "☼",
           "Annotate": "✎", "Add BG": "▣", "Resize": "⤢", "Split": "✂", "Rotate": "⟳",
-          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚", "Text": "¶", "Unlock": "⚷", "Organize": "▦"}
+          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚", "Text": "¶", "Unlock": "⚷", "Organize": "▦", "OCR": "⌕"}
 
 HINTS = {
     "Compress": "Shrink file size", "Metadata": "View · remove GPS", "Redact": "Hide private info",
@@ -42,6 +42,7 @@ HINTS = {
     "Extract": "Save embedded images", "Snip": "Area → image",
     "Text": "Copy the text (OCR)", "Unlock": "Remove the password",
     "Organize": "Reorder · rotate · delete · extract",
+    "OCR": "Make a scan searchable",
 }
 FORMAT_HINTS = {"JPG": "Small, universal", "PNG": "Lossless · transparency", "WEBP": "Smallest for web",
                 "HEIC": "iPhone format", "TIFF": "Print · archival", "AVIF": "Next-gen, tiny",
@@ -49,7 +50,7 @@ FORMAT_HINTS = {"JPG": "Small, universal", "PNG": "Lossless · transparency", "W
                 "DOCX": "Editable Word", "TXT": "Plain text"}
 
 IMAGE_TOOLS = ["Compress", "Resize", "Crop", "Edit", "Annotate", "Redact", "Add BG", "Text", "Metadata"]
-PDF_TOOLS = ["Snip", "Organize", "Compress", "Split", "Rotate", "Protect", "Extract", "Metadata"]
+PDF_TOOLS = ["Snip", "Organize", "OCR", "Compress", "Split", "Rotate", "Protect", "Extract", "Metadata"]
 
 
 # ---------------------------------------------------------------- background jobs
@@ -291,6 +292,10 @@ class DragShiftApp(QObject):
                 else:
                     self.submit("tool:Unlock", paths, lambda: [imaging.unlock_pdf(p) for p in paths],
                                 "Removing password…")
+            elif name == "OCR":
+                from . import ocr
+                self.submit("tool:OCR", paths, lambda: [ocr.make_searchable_pdf(p)[0] for p in paths],
+                            tr("Recognising text ({n} pages)…", n=sum(imaging.pdf_page_count(p) for p in paths)))
             elif name == "Snip":
                 try:
                     self.open_window(tools.PdfSnipWindow(paths[0], self.notify))

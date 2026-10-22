@@ -383,6 +383,16 @@ PT: dict[str, str] = {
     "PDFs merged": "PDFs mesclados",
     "Pages organized": "Páginas organizadas",
 
+    # searchable PDF (OCR)
+    "OCR": "OCR",
+    "Make a scan searchable": "Tornar escaneado pesquisável",
+    "Recognising text ({n} pages)…": "Reconhecendo texto ({n} páginas)…",
+    "Searchable": "Pesquisável",
+    "Searchable PDF": "PDF pesquisável",
+    "Ctrl+F works": "Ctrl+F funciona",
+    "No text found to recognise in this PDF.": "Nenhum texto encontrado para reconhecer neste PDF.",
+    "This PDF already has selectable text.": "Este PDF já tem texto selecionável.",
+
     # unlock
     "Unlock": "Tirar senha",
     "Unlocked": "Sem senha",

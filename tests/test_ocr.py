@@ -58,8 +58,10 @@ def test_ocr_unavailable_message(monkeypatch):
 
 
 def test_prepare_limits_and_upscales():
-    assert max(ocr._prepare(Image.new("RGB", (6000, 3000)), 2600).size) == 2600
-    assert ocr._prepare(Image.new("RGB", (300, 100)), 2600).size == (600, 200)
+    im, k = ocr._prepare(Image.new("RGB", (6000, 3000)), 2600)
+    assert max(im.size) == 2600 and abs(k - 2600 / 6000) < 1e-9
+    im, k = ocr._prepare(Image.new("RGB", (300, 100)), 2600)
+    assert im.size == (600, 200) and k == 2.0
 
 
 def test_tidy():
@@ -105,3 +107,33 @@ def test_parse_page_ranges():
     for bad in ("0", "3-1", "11", "a"):
         with pytest.raises(UserError):
             imaging.parse_page_ranges(bad, 10)
+
+
+@pytest.mark.parametrize("rotation", [0, 90, 270])
+def test_searchable_pdf_places_words(tmp_path, rotation):
+    """Invisible words land where the OCR saw them, also on rotated pages."""
+    p = tmp_path / "scan.pdf"
+    doc = fitz.open()
+    pg = doc.new_page(width=600, height=800)
+    pg.draw_rect(fitz.Rect(40, 40, 200, 90), fill=(0.8, 0.8, 0.8))   # "ink", no text layer
+    pg.set_rotation(rotation)
+    doc.save(p)
+    k = ocr.OCR_DPI / 72
+    # boxes in displayed-page pixels (300 dpi): "Nota" at (100,50)pt, "fiscal" right after it
+    fake = lambda im: [[ocr.Word("Nota", 100 * k, 50 * k, 40 * k, 14 * k),
+                        ocr.Word("fiscal", 146 * k, 50 * k, 44 * k, 14 * k)]]
+    out, done, skipped = ocr.make_searchable_pdf(p, ocr_lines=fake)
+    assert (done, skipped) == (1, 0)
+    page = fitz.open(out)[0]
+    # order by position on the displayed page (sort=True would use unrotated space)
+    words = sorted(page.get_text("words"), key=lambda w: (fitz.Rect(w[:4]) * page.rotation_matrix).x0)
+    assert [w[4] for w in words] == ["Nota", "fiscal"]
+    shown = fitz.Rect(words[0][:4]) * page.rotation_matrix          # back to displayed coords
+    assert abs(shown.x0 - 100) < 4 and 48 < (shown.y0 + shown.y1) / 2 < 66
+    assert page.get_text("text", clip=fitz.Rect(90, 40, 200, 70) * page.derotation_matrix).split() == ["Nota", "fiscal"]
+
+
+def test_searchable_pdf_skips_text_pages(tmp_path):
+    p = make_pdf(tmp_path / "t.pdf")
+    with pytest.raises(UserError):
+        ocr.make_searchable_pdf(p, ocr_lines=lambda im: [])

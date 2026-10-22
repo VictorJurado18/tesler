@@ -468,6 +468,12 @@ PT: dict[str, str] = {
     "Renamed {n} files back": "{n} arquivos voltaram ao nome original",
     "Couldn't undo": "Não foi possível desfazer",
 
+    # pdf tables
+    "Tables → Excel": "Tabelas → Excel",
+    "No tables found. This looks like a scanned PDF: run OCR first.":
+        "Nenhuma tabela encontrada. Parece um PDF escaneado: rode o OCR antes.",
+    "No tables found in this PDF.": "Nenhuma tabela encontrada neste PDF.",
+
     # unlock
     "Unlock": "Tirar senha",
     "Unlocked": "Sem senha",

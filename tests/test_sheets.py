@@ -55,3 +55,46 @@ def test_sheet_to_pdf(tmp_path: Path):
     out = convert.convert(src, "sheet", "PDF")[0]
     d = fitz.open(out)
     assert d.page_count >= 2 and "Item 119" in "".join(p.get_text() for p in d)
+
+
+def _statement_pdf(path: Path) -> Path:
+    doc = fitz.open()
+    pg = doc.new_page()
+    rows = [("Data", "Descrição", "Valor (R$)", "Saldo (R$)"), ("01/10/2026", "Saldo anterior", "", "1.250,00"),
+            ("05/10/2026", "Boleto energia", "-189,47", "1.060,53")]
+    x, y0 = [50, 140, 360, 460, 560], 90
+    for i, r in enumerate(rows):
+        for j, c in enumerate(r):
+            pg.insert_text((x[j] + 4, y0 + i * 22 + 15), c, fontsize=10)
+    for i in range(len(rows) + 1):
+        pg.draw_line((x[0], y0 + i * 22), (x[-1], y0 + i * 22))
+    for xx in x:
+        pg.draw_line((xx, y0), (xx, y0 + len(rows) * 22))
+    pg2 = doc.new_page()                                   # borderless, aligned columns
+    for i, r in enumerate([("Código", "Produto", "Qtd"), ("00123", "Café 500g", "3"), ("00456", "Açúcar 1kg", "2")]):
+        for j, c in enumerate(r):
+            pg2.insert_text(([60, 160, 360][j], 100 + i * 20), c, fontsize=11)
+    doc.save(path)
+    return path
+
+
+def test_pdf_tables_to_xlsx(tmp_path: Path):
+    out = convert.convert(_statement_pdf(tmp_path / "extrato.pdf"), "pdf", "XLSX")[0]
+    wb = load_workbook(out)
+    assert wb.sheetnames == ["p1", "p2"]
+    p1 = [[c.value for c in r] for r in wb["p1"].iter_rows()]
+    assert p1[1] == ["01/10/2026", "Saldo anterior", None, 1250]
+    assert p1[2] == ["05/10/2026", "Boleto energia", -189.47, 1060.53]
+    p2 = [[c.value for c in r] for r in wb["p2"].iter_rows()]
+    assert p2[1] == ["00123", "Café 500g", 3]
+
+
+def test_pdf_without_tables(tmp_path: Path):
+    import pytest
+    from dragshift.util import UserError
+    p = tmp_path / "t.pdf"
+    d = fitz.open()
+    d.new_page().insert_text((72, 72), "Só um parágrafo de texto, nada de tabela aqui.")
+    d.save(p)
+    with pytest.raises(UserError):
+        convert.convert(p, "pdf", "XLSX")

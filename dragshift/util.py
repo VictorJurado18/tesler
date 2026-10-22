@@ -155,3 +155,30 @@ def ui_font(px: int = 13, bold: bool = False, display: bool = True):
     f.setPixelSize(int(px))
     f.setBold(bold)
     return f
+
+
+# ---------------------------------------------------------------- COM shutdown noise
+LOG_FILE = None   # set by app.setup_logging: where faulthandler writes
+
+
+class quiet_faults:
+    """Pause the crash logger around calls that raise *handled* Windows exceptions, e.g.
+    Word/Excel .Quit(): the server process exits mid-call (RPC 0x800706BA), COM handles it,
+    but faulthandler would still write a scary 'Windows fatal exception' to the log."""
+
+    def __enter__(self):
+        import faulthandler
+        self.was = faulthandler.is_enabled()
+        if self.was:
+            faulthandler.disable()
+        return self
+
+    def __exit__(self, *exc):
+        if self.was:
+            import faulthandler
+            import sys
+            try:
+                faulthandler.enable(LOG_FILE or sys.stderr)
+            except Exception:
+                pass
+        return False

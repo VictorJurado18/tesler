@@ -255,6 +255,8 @@ class DragShiftApp(QObject):
         convert_items = []
         for t in convert.targets_for(cat, ext):
             hint = FORMAT_HINTS.get(t, "")
+            if cat == "pdf" and t == "XLSX":
+                hint = "Tables → Excel"
             if cat == "image" and t == "PDF" and len(same) > 1:
                 hint = tr("{n} images → 1 PDF", n=len(same))
             convert_items.append(Item(t, key=f"convert:{t}", hint=hint))
@@ -561,6 +563,8 @@ def setup_logging():
     if sys.stderr is None or getattr(sys, "frozen", False) or sys.executable.lower().endswith("pythonw.exe"):
         sys.stdout = sys.stderr = f
     faulthandler.enable(f)
+    from . import util
+    util.LOG_FILE = f
 
     def hook(t, v, tb):
         f.write("Unhandled: " + "".join(traceback.format_exception(t, v, tb)))

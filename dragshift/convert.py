@@ -26,7 +26,7 @@ except ImportError:  # pragma: no cover
     import fitz  # type: ignore
 
 IMAGE_TARGETS = ["PNG", "JPG", "WEBP", "HEIC", "TIFF", "AVIF", "BMP", "PDF", "ICO", "GIF"]
-PDF_TARGETS = ["JPG", "PNG", "DOCX", "TXT"]
+PDF_TARGETS = ["JPG", "PNG", "DOCX", "XLSX", "TXT"]
 DOCX_TARGETS = ["PDF", "TXT"]
 TEXT_TARGETS = ["PDF", "DOCX"]
 
@@ -303,10 +303,12 @@ def _word_to_pdf(src: Path, out: Path) -> bool:
         return False
     finally:
         if word is not None:
-            try:
-                word.Quit()
-            except Exception:
-                pass
+            from .util import quiet_faults
+            with quiet_faults():
+                try:
+                    word.Quit()
+                except Exception:
+                    pass
         pythoncom.CoUninitialize()
 
 
@@ -400,6 +402,9 @@ def convert(src: str | Path, cat: str, target: str) -> list[Path]:
             return pdf_to_txt(src)
         if target == "DOCX":
             return pdf_to_docx(src)
+        if target == "XLSX":
+            from .sheets import pdf_to_xlsx
+            return pdf_to_xlsx(src)
     if cat == "docx":
         return docx_to_pdf(src) if target == "PDF" else docx_to_txt(src)
     if cat == "text":

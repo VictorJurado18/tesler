@@ -213,10 +213,12 @@ def _excel_to_pdf(src: Path, out: Path) -> bool:
         return False
     finally:
         if xl is not None:
-            try:
-                xl.Quit()
-            except Exception:
-                pass
+            from .util import quiet_faults
+            with quiet_faults():
+                try:
+                    xl.Quit()
+                except Exception:
+                    pass
         pythoncom.CoUninitialize()
 
 
@@ -251,3 +253,58 @@ def convert_sheet(src: str | Path, target: str) -> list[Path]:
 
 def targets(src_ext: str) -> list[str]:
     return SHEET_TARGETS_XLSX if src_ext.lower() in (".xlsx", ".xlsm") else SHEET_TARGETS_CSV
+
+
+# ---------------------------------------------------------------- PDF tables → XLSX
+def _clean_cell(v) -> str:
+    return " ".join(str(v).split()) if v is not None else ""
+
+
+def pdf_tables(src: str | Path) -> list[tuple[int, list[list[str]]]]:
+    """[(page number 1-based, rows)] for every table PyMuPDF detects (lines or text alignment)."""
+    from .convert import open_pdf
+    found = []
+    with open_pdf(src) as doc:
+        for pg in doc:
+            tabs = pg.find_tables()                       # ruled tables
+            if not tabs.tables:
+                tabs = pg.find_tables(strategy="text")    # borderless (aligned columns)
+            for t in tabs.tables:
+                # read each cell by its box: Table.extract() can scramble characters
+                # ("1.250,00" → "125000 . ,") with some fonts
+                rows = [[_clean_cell(pg.get_text("text", clip=c)) if c else "" for c in row.cells]
+                        for row in t.rows]
+                rows = [r for r in rows if any(r)]
+                if len(rows) >= 2 and max(len(r) for r in rows) >= 2:
+                    found.append((pg.number + 1, rows))
+    return found
+
+
+def pdf_to_xlsx(src: str | Path) -> list[Path]:
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+    from openpyxl.utils import get_column_letter
+    tables = pdf_tables(src)
+    if not tables:
+        from .convert import open_pdf
+        with open_pdf(src) as doc:
+            scanned = sum(len(p.get_text().strip()) for p in doc) < 20
+        raise UserError("No tables found. This looks like a scanned PDF: run OCR first."
+                        if scanned else "No tables found in this PDF.")
+    wb = Workbook()
+    wb.remove(wb.active)
+    per_page: dict[int, int] = {}
+    for page, rows in tables:
+        per_page[page] = per_page.get(page, 0) + 1
+        ws = wb.create_sheet(f"p{page}" + (f" ({per_page[page]})" if per_page[page] > 1 else ""))
+        comma = uses_comma_decimal(rows, ";")
+        for i, r in enumerate(rows):
+            ws.append(r if i == 0 else [to_number(c, comma) for c in r])
+        for c in ws[1]:
+            c.font = Font(bold=True)
+        for i in range(1, max(len(r) for r in rows) + 1):
+            width = max((len(str(r[i - 1])) for r in rows if len(r) >= i), default=8)
+            ws.column_dimensions[get_column_letter(i)].width = min(max(8, width + 2), 50)
+    out = sibling(src, ext=".xlsx")
+    wb.save(out)
+    return [out]

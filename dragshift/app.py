@@ -648,7 +648,10 @@ def selftest() -> int:
                 convert.convert(src, "image", t)
             pdf = convert.convert(src, "image", "PDF")[0]
             for t in convert.PDF_TARGETS:
-                convert.convert(pdf, "pdf", t)
+                try:
+                    convert.convert(pdf, "pdf", t)
+                except UserError:
+                    assert t == "XLSX"   # the sample PDF is one picture: "no tables" is the right answer
             (Path(d) / "n.txt").write_text("hello")
             docx = convert.convert(Path(d) / "n.txt", "text", "DOCX")[0]
             convert.convert(docx, "docx", "TXT")

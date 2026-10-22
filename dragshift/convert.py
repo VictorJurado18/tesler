@@ -10,6 +10,7 @@ from pathlib import Path
 from PIL import Image, ImageOps
 
 from .util import UserError, sibling
+from .i18n import tr
 
 try:  # HEIC / HEIF support
     import pillow_heif
@@ -147,7 +148,7 @@ def pdf_to_images(src: str | Path, target: str, dpi: int | None = None) -> list[
         for i, page in enumerate(doc):
             pix = page.get_pixmap(dpi=dpi, alpha=False)
             im = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-            label = f"page {i + 1}" if n > 1 else ""
+            label = tr("page {n}", n=i + 1) if n > 1 else ""
             out = sibling(src, label, "." + target.lower())
             save_image(im, out, target)
             outs.append(out)

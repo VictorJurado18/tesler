@@ -78,6 +78,9 @@ def output_dir(src: str | Path) -> Path:
 def sibling(src: str | Path, suffix_label: str = "", ext: str | None = None) -> Path:
     """Output path for `src`. sibling('a.jpg', 'Cropped') -> 'a Cropped.jpg' (never overwrites)."""
     s = output_dir(src) / Path(src).name
+    if suffix_label:
+        from .i18n import tr
+        suffix_label = tr(suffix_label)
     stem = f"{s.stem} {suffix_label}".strip() if suffix_label else s.stem
     new_ext = ext if ext is not None else s.suffix
     if not new_ext.startswith("."):

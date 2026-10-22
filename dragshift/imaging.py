@@ -10,6 +10,7 @@ from PIL.ExifTags import GPSTAGS, TAGS
 
 from .convert import atomic_save, fitz, flatten, open_image, open_pdf, save_image
 from .util import sibling
+from .i18n import tr
 
 EXT_TARGET = {".jpg": "JPG", ".jpeg": "JPG", ".png": "PNG", ".webp": "WEBP", ".tif": "TIFF",
               ".tiff": "TIFF", ".bmp": "BMP", ".heic": "HEIC", ".heif": "HEIC",
@@ -292,7 +293,7 @@ def split_pdf(src: str | Path) -> list[Path]:
         for i in range(doc.page_count):
             nd = fitz.open()
             nd.insert_pdf(doc, from_page=i, to_page=i)
-            out = sibling(src, f"page {i + 1}", ".pdf")
+            out = sibling(src, tr("page {n}", n=i + 1), ".pdf")
             nd.save(out)
             nd.close()
             outs.append(out)
@@ -321,7 +322,7 @@ def protect_pdf(src: str | Path, password: str) -> Path:
 
 def extract_pdf_images(src: str | Path) -> list[Path]:
     from .util import output_dir, unique_path
-    folder = unique_path(output_dir(src) / f"{Path(src).stem} images")
+    folder = unique_path(output_dir(src) / tr("{name} images", name=Path(src).stem))
     outs: list[Path] = []
     seen: set[int] = set()
     with open_pdf(src) as doc:
@@ -343,10 +344,10 @@ def extract_pdf_images(src: str | Path) -> list[Path]:
                     pix = fitz.Pixmap(doc, xref)
                     if pix.n - pix.alpha >= 4:
                         pix = fitz.Pixmap(fitz.csRGB, pix)
-                    p = folder / f"page {pno + 1} image {len(outs) + 1}.png"
+                    p = folder / (tr("page {p} image {n}", p=pno + 1, n=len(outs) + 1) + ".png")
                     pix.save(p)
                 else:
-                    p = folder / f"page {pno + 1} image {len(outs) + 1}.{ext}"
+                    p = folder / (tr("page {p} image {n}", p=pno + 1, n=len(outs) + 1) + f".{ext}")
                     p.write_bytes(info["image"])
                 outs.append(p)
     if not outs:

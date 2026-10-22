@@ -13,12 +13,13 @@ from typing import Callable
 
 from PySide6.QtCore import (QEasingCurve, QObject, QPoint, QPointF, QRectF, QRunnable, Qt,
                             QThreadPool, QTimer, QVariantAnimation, Signal)
-from PySide6.QtGui import (QColor, QCursor, QFont, QGuiApplication, QImage, QPainter,
+from PySide6.QtGui import (QColor, QCursor, QFont, QFontMetrics, QGuiApplication, QImage, QPainter,
                            QPainterPath, QPen, QPixmap, QRadialGradient)
 from PySide6.QtWidgets import QWidget
 
 from . import glass
 from .util import resolve_shortcuts, ui_family
+from .i18n import tr
 
 
 @dataclass
@@ -201,7 +202,7 @@ class RadialMenu(QWidget):
             self._load(early)           # slices show at once; drop still comes via dragEnter
         else:
             self.paths, self.rings, self.ring_names = [], {}, []
-            self.hub_text = "Drop here"
+            self.hub_text = tr("Drop here")
             for n in (4, 7):  # most common rings: render speculatively
                 self._render(n)
         self._t = 0.0
@@ -465,19 +466,19 @@ class RadialMenu(QWidget):
     def _paint_unsupported(self, p: QPainter, c: QPointF, fg: QColor, fg_dim: QColor,
                            shadow_col: QColor):
         """Nothing to offer: say so in the top band, clear of the cursor and the drag image."""
-        ext = Path(self.paths[0]).suffix.lower() or "this file"
+        ext = Path(self.paths[0]).suffix.lower() or tr("this file")
         f = QFont(ui_family(True))
         f.setPixelSize(13)
         f.setBold(True)
         p.setFont(f)
         r_mid = (R_IN + R_OUT) / 2
         self._text(p, QRectF(c.x() - R_OUT, c.y() - r_mid - 18, 2 * R_OUT, 18),
-                   f"Can't convert {ext}", fg, shadow_col)
+                   tr("Can't convert {ext}", ext=ext), fg, shadow_col)
         f.setPixelSize(10)
         f.setBold(False)
         p.setFont(f)
         self._text(p, QRectF(c.x() - R_OUT, c.y() - r_mid + 1, 2 * R_OUT, 16),
-                   "Images · PDF · Word · Text", fg_dim, None)
+                   tr("Images · PDF · Word · Text"), fg_dim, None)
 
     def _paint_fallback(self, p: QPainter, c: QPointF, n: int):
         hub = QPainterPath()
@@ -520,15 +521,15 @@ class RadialMenu(QWidget):
         items = self.items
         hov = items[self.hover] if 0 <= self.hover < len(items) else None
         if hov is not None:
-            top, sub = hov.label if not hov.glyph else hov.label.title(), hov.hint or ""
+            top, sub = tr(hov.label) if not hov.glyph else tr(hov.label).title(), tr(hov.hint or "")
         else:
             ring_name = self.ring_names[self.ring_idx] if self.ring_names else ""
             top = self.hub_text
             if len(self.ring_names) > 1:
                 other = self.ring_names[(self.ring_idx + 1) % len(self.ring_names)]
-                sub = f"⇧ {other.upper()}"
+                sub = f"⇧ {tr(other).upper()}"
             else:
-                sub = ring_name.upper()
+                sub = tr(ring_name).upper()
         f = QFont(ui_family(True))
         f.setPixelSize(14)
         f.setBold(True)
@@ -567,12 +568,20 @@ class RadialMenu(QWidget):
             f.setPixelSize(10)
             f.setBold(True)
             f.setLetterSpacing(QFont.AbsoluteSpacing, 0.7)
+            label = tr(it.label).upper()
+            # longer labels (e.g. Portuguese "REDIMENSIONAR") shrink to fit the petal
+            if QFontMetrics(f).horizontalAdvance(label) > 78:
+                f.setLetterSpacing(QFont.AbsoluteSpacing, 0.2)
+                px = 10
+                while px > 7 and QFontMetrics(f).horizontalAdvance(label) > 78:
+                    px -= 1
+                    f.setPixelSize(px)
             p.setFont(f)
-            self._text(p, QRectF(pt.x() - 42, pt.y() + 1, 84, 16), it.label.upper(), col, shadow_col)
+            self._text(p, QRectF(pt.x() - 42, pt.y() + 1, 84, 16), label, col, shadow_col)
         else:
             f.setPixelSize(int(14 + 2 * h))
             f.setBold(True)
             f.setLetterSpacing(QFont.AbsoluteSpacing, 0.9)
             p.setFont(f)
-            self._text(p, QRectF(pt.x() - 42, pt.y() - 12, 84, 24), it.label, col, shadow_col)
+            self._text(p, QRectF(pt.x() - 42, pt.y() - 12, 84, 24), tr(it.label), col, shadow_col)
         p.restore()

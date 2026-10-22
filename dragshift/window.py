@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (QHBoxLayout, QLabel, QPushButton, QSizeGrip, QVBo
                                QWidget)
 
 from . import glass
+from .i18n import plural, tr
 
 IS_WIN = sys.platform == "win32"
 
@@ -43,7 +44,7 @@ class GlassWindow(QWidget):
         bar.addStretch(1)
         close = QPushButton("✕")
         close.setObjectName("chrome")
-        close.setToolTip("Close (Esc)")
+        close.setToolTip(tr("Close (Esc)"))
         close.clicked.connect(self.close)
         bar.addWidget(close)
         outer.addLayout(bar)

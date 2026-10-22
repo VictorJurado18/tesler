@@ -20,6 +20,7 @@ from PySide6.QtWidgets import QWidget
 from . import glass
 from .util import ui_family
 from .report import Result
+from .i18n import plural, tr
 
 W, H = 380, 104
 GAP = 10
@@ -210,8 +211,8 @@ class ToastCard(QWidget):
             self.result = None
             self.thumb = None
             self.good = ""
-            bin_name = "Recycle Bin" if sys.platform == "win32" else "Trash"
-            self.info("Undone", f"Moved {n} file{'s' if n != 1 else ''} to the {bin_name}", 2500)
+            bin_name = tr("Recycle Bin" if sys.platform == "win32" else "Trash")
+            self.info(tr("Undone"), plural(n, "Moved {n} file to the {bin}", "Moved {n} files to the {bin}", bin=bin_name), 2500)
 
     # ------------------------------------------------------------ paint
     def paintEvent(self, e):
@@ -304,7 +305,7 @@ class ToastCard(QWidget):
         self.buttons = []
         if self.state == "done" and self.result and self.result.outs:
             names = ["Open", "Show", "Undo"]
-            labels = {"Open": "Open", "Show": "Show in folder", "Undo": "Undo"}
+            labels = {"Open": tr("Open"), "Show": tr("Show in folder"), "Undo": tr("Undo")}
             f.setPixelSize(12)
             f.setBold(True)
             p.setFont(f)

@@ -148,6 +148,9 @@ def summarize(action: str, srcs: list, outs: list, extra: str = "") -> Result:
             label = tr("PDFs merged") if len(srcs) > 1 else tr("Pages organized")
         return Result(label, f"{plural(n or 0, '{n} page', '{n} pages')} · {human_size(after)} · {o0.name}", outs, srcs)
 
+    if name == "Sign":
+        return Result(tr("PDF signed"), f"{extra} · {o0.name}" if extra else o0.name, outs, srcs)
+
     if name == "Rename":
         first = f"{srcs[0].name} → {o0.name}" if srcs else o0.name
         return Result(plural(len(outs), "Renamed {n} file", "Renamed {n} files"),

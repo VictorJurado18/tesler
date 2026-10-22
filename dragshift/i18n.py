@@ -483,6 +483,32 @@ PT: dict[str, str] = {
     "Keeps the best quality that fits. PDFs that are only text are already small and may not shrink much.":
         "Mantém a melhor qualidade que couber. PDFs só de texto já são leves e podem não diminuir muito.",
 
+    # sign
+    "Sign": "Assinar",
+    "Place your signature": "Colocar sua assinatura",
+    "Sign PDF": "Assinar PDF",
+    "Signed": "Assinado",
+    "PDF signed": "PDF assinado",
+    "Signing…": "Assinando…",
+    "every page": "todas as páginas",
+    "Same place on every page": "Mesmo lugar em todas as páginas",
+    "✎ Draw": "✎ Desenhar",
+    "⬆ From photo": "⬆ De uma foto",
+    "Photo or scan of your signature on white paper": "Foto ou scan da sua assinatura em papel branco",
+    "Delete the selected signature": "Apagar a assinatura selecionada",
+    "Photo of your signature": "Foto da sua assinatura",
+    "Draw signature": "Desenhar assinatura",
+    "Sign here with the mouse": "Assine aqui com o mouse",
+    "Black": "Preto",
+    "Blue": "Azul",
+    "Clear": "Limpar",
+    "Save signature": "Salvar assinatura",
+    "Click or drag on the page to place the signature": "Clique ou arraste na página para posicionar a assinatura",
+    "Pick or create a signature first": "Escolha ou crie uma assinatura primeiro",
+    "The signature is empty.": "A assinatura está vazia.",
+    "No signature found in this image. Use a photo of dark ink on light paper.":
+        "Nenhuma assinatura encontrada na imagem. Use uma foto de tinta escura em papel claro.",
+
     # unlock
     "Unlock": "Tirar senha",
     "Unlocked": "Sem senha",

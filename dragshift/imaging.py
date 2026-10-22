@@ -732,3 +732,67 @@ def build_pdf(srcs: list[str | Path], refs: list[PageRef], label: str) -> Path:
         for d in docs:
             d.close()
     return out
+
+
+# ---------------------------------------------------------------- signatures
+def signatures_dir() -> Path:
+    import os
+    base = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "DragShift" / "signatures"
+    base.mkdir(parents=True, exist_ok=True)
+    return base
+
+
+def list_signatures() -> list[Path]:
+    return sorted(signatures_dir().glob("*.png"), key=lambda p: p.stat().st_mtime, reverse=True)
+
+
+def save_signature(im: Image.Image) -> Path:
+    import time
+    im = trim_alpha(im.convert("RGBA"), pad=6)
+    out = signatures_dir() / f"assinatura {time.strftime('%Y%m%d-%H%M%S')}.png"
+    im.save(out)
+    return out
+
+
+def trim_alpha(im: Image.Image, pad: int = 0) -> Image.Image:
+    box = im.getchannel("A").point(lambda v: 255 if v > 10 else 0).getbbox()
+    if not box:
+        raise UserError("The signature is empty.")
+    x0, y0, x1, y1 = box
+    return im.crop((max(0, x0 - pad), max(0, y0 - pad), min(im.width, x1 + pad), min(im.height, y1 + pad)))
+
+
+def signature_from_photo(im: Image.Image) -> Image.Image:
+    """Photo/scan of a signature on paper → ink only, transparent background.
+    Paper brightness is measured locally so shadows on the photo don't become ink."""
+    from PIL import ImageOps
+    im = ImageOps.exif_transpose(im).convert("RGB")
+    if max(im.size) > 2000:
+        im.thumbnail((2000, 2000), Image.LANCZOS)
+    gray = im.convert("L")
+    paper = gray.filter(ImageFilter.MaxFilter(15)).filter(ImageFilter.GaussianBlur(25))   # local paper level
+    diff = ImageChops.subtract(paper, gray)                                               # how much darker than paper
+    alpha = diff.point(lambda v: 0 if v < 18 else min(255, int((v - 18) * 4)))
+    if not alpha.getbbox():
+        raise UserError("No signature found in this image. Use a photo of dark ink on light paper.")
+    rgb = ImageEnhance.Brightness(im).enhance(0.75)          # ink a bit darker/cleaner
+    out = rgb.convert("RGBA")
+    out.putalpha(alpha)
+    return trim_alpha(out, pad=6)
+
+
+def sign_pdf(src: str | Path, signature: str | Path, page: int | None, frac: tuple[float, float, float, float]) -> Path:
+    """Stamp the signature PNG on one page (or every page when page is None) at `frac`
+    = (x0, y0, x1, y1), fractions of the page as displayed (rotation applied)."""
+    out = sibling(src, "Signed", ".pdf")
+    x0, y0, x1, y1 = frac
+    with open_pdf(src) as doc:
+        targets = range(doc.page_count) if page is None else [page]
+        for i in targets:
+            pg = doc[i]
+            r = pg.rect
+            shown = fitz.Rect(r.x0 + x0 * r.width, r.y0 + y0 * r.height, r.x0 + x1 * r.width, r.y0 + y1 * r.height)
+            pg.insert_image(shown * pg.derotation_matrix, filename=str(signature), keep_proportion=True,
+                            overlay=True, rotate=pg.rotation)
+        doc.save(out, garbage=3, deflate=True)
+    return out

@@ -32,7 +32,7 @@ IPC_NAME = ipc_name()
 
 GLYPHS = {"Compress": "⇲", "Metadata": "ⓘ", "Redact": "▮", "Crop": "⌗", "Edit": "☼",
           "Annotate": "✎", "Add BG": "▣", "Resize": "⤢", "Split": "✂", "Rotate": "⟳",
-          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚", "Text": "¶", "Unlock": "⚷", "Organize": "▦", "OCR": "⌕", "Cutout": "✂", "Rename": "✎"}
+          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚", "Text": "¶", "Unlock": "⚷", "Organize": "▦", "OCR": "⌕", "Cutout": "✂", "Rename": "✎", "Sign": "✍"}
 
 HINTS = {
     "Compress": "Shrink file size", "Metadata": "View · remove GPS", "Redact": "Hide private info",
@@ -45,6 +45,7 @@ HINTS = {
     "OCR": "Make a scan searchable",
     "Cutout": "Remove the background (AI)",
     "Rename": "Rename all with a pattern",
+    "Sign": "Place your signature",
 }
 FORMAT_HINTS = {"JPG": "Small, universal", "PNG": "Lossless · transparency", "WEBP": "Smallest for web",
                 "HEIC": "iPhone format", "TIFF": "Print · archival", "AVIF": "Next-gen, tiny",
@@ -54,7 +55,7 @@ FORMAT_HINTS = {"JPG": "Small, universal", "PNG": "Lossless · transparency", "W
                 "WAV": "Uncompressed audio", "M4A": "Apple / small audio"}
 
 IMAGE_TOOLS = ["Compress", "Resize", "Crop", "Edit", "Annotate", "Redact", "Cutout", "Add BG", "Text", "Metadata"]
-PDF_TOOLS = ["Snip", "Organize", "OCR", "Compress", "Split", "Rotate", "Protect", "Extract", "Metadata"]
+PDF_TOOLS = ["Snip", "Sign", "Organize", "OCR", "Compress", "Split", "Rotate", "Protect", "Extract", "Metadata"]
 
 
 # ---------------------------------------------------------------- background jobs
@@ -328,6 +329,8 @@ class DragShiftApp(QObject):
                     self.toasts.error(tr("Couldn't open {name}", name=tr(name)), tr(str(e)))
             elif name == "Compress":
                 self.open_window(tools.CompressPdfWindow(paths, self.notify))
+            elif name == "Sign":
+                self.open_window(tools.SignWindow(paths[0], self.notify))
             else:
                 fns = {"Split": imaging.split_pdf,
                        "Rotate": lambda p: [imaging.rotate_pdf(p)], "Extract": imaging.extract_pdf_images}
@@ -662,7 +665,8 @@ def selftest() -> int:
                       tools.MetadataWindow(str(src), n), tools.CompressWindow([str(src)], n),
                       tools.ResizeWindow([str(src)], n), tools.ProtectWindow(str(pdf), n),
                       tools.PdfSnipWindow(str(pdf), n), tools.OrganizeWindow([str(pdf)], n),
-                      tools.UnlockWindow(str(pdf), n), tools.RenameWindow([str(src), str(pdf)], n)):
+                      tools.UnlockWindow(str(pdf), n), tools.RenameWindow([str(src), str(pdf)], n),
+                      tools.CompressPdfWindow([str(pdf)], n), tools.SignWindow(str(pdf), n)):
                 w.close()
             ToastStack().info("ok", "ok").dismiss()
             check_text_renders()

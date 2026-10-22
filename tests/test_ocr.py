@@ -195,3 +195,37 @@ def test_compress_pdf_target_unreachable(tmp_path):
     p = make_pdf(tmp_path / "texto.pdf")
     out, reached = imaging.compress_pdf_to(p, 50)                 # 50 bytes: impossible
     assert not reached and out.exists()
+
+
+def test_signature_from_photo_ignores_shadow(tmp_path, monkeypatch):
+    import numpy as np
+    from PIL import ImageDraw
+    from dragshift import imaging
+    monkeypatch.setattr(imaging, "signatures_dir", lambda: tmp_path)
+    # paper with a strong shadow gradient + a dark-blue scribble
+    g = np.linspace(250, 150, 1200)[None, :].repeat(600, 0)
+    photo = Image.fromarray(np.stack([g, g, g * 0.97], -1).astype("uint8"))
+    d = ImageDraw.Draw(photo)
+    d.line([(300, 350), (420, 250), (520, 380), (640, 260), (800, 340)], fill=(20, 30, 90), width=9)
+    cut = imaging.signature_from_photo(photo)
+    a = np.asarray(cut.getchannel("A"))
+    assert cut.width < 600 and cut.height < 200          # trimmed to the ink, shadow ignored
+    assert a.max() == 255 and (a == 0).mean() > 0.5
+    saved = imaging.save_signature(cut)
+    assert saved in imaging.list_signatures()
+
+
+def test_sign_pdf_all_pages(tmp_path):
+    import numpy as np
+    from dragshift import imaging
+    sig = Image.new("RGBA", (300, 100), (200, 0, 0, 255))
+    sp = tmp_path / "s.png"
+    sig.save(sp)
+    doc = fitz.open()
+    for _ in range(3):
+        doc.new_page()
+    p = tmp_path / "c.pdf"
+    doc.save(p)
+    out = imaging.sign_pdf(p, sp, None, (0.6, 0.85, 0.9, 0.95))
+    d = fitz.open(out)
+    assert out.name == "c Signed.pdf" and all(len(pg.get_images()) == 1 for pg in d)

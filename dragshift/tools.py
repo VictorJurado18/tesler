@@ -2019,3 +2019,295 @@ class CompressPdfWindow(ToolWindow):
         limit, label = self._target()
         self.run(lambda: [imaging.compress_pdf_to(p, limit)[0] for p in paths], "Compressing…",
                  tr("target {label}", label=label))
+
+
+# ================================================================ SIGN PDF
+class SignaturePad(QWidget):
+    """Draw with the mouse (or pen). Strokes are kept as point lists and rendered at 3×."""
+
+    def __init__(self):
+        super().__init__()
+        self.setMinimumSize(560, 200)
+        self.setCursor(Qt.CrossCursor)
+        self.strokes: list[list[QPointF]] = []
+        self.color = QColor("#10224d")
+
+    def mousePressEvent(self, e):
+        self.strokes.append([e.position()])
+        self.update()
+
+    def mouseMoveEvent(self, e):
+        if e.buttons() & Qt.LeftButton and self.strokes:
+            self.strokes[-1].append(e.position())
+            self.update()
+
+    def clear(self):
+        self.strokes = []
+        self.update()
+
+    def _draw(self, p: QPainter, k: float):
+        p.setRenderHint(QPainter.Antialiasing)
+        pen = QPen(self.color, 2.6 * k, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+        p.setPen(pen)
+        for s in self.strokes:
+            if len(s) == 1:
+                p.drawPoint(QPointF(s[0].x() * k, s[0].y() * k))
+            else:
+                p.drawPolyline(QPolygonF([QPointF(q.x() * k, q.y() * k) for q in s]))
+
+    def paintEvent(self, e):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.fillRect(self.rect(), QColor(255, 255, 255, 235))
+        p.setPen(QPen(QColor(0, 0, 0, 60), 1, Qt.DashLine))
+        y = self.height() * 0.72
+        p.drawLine(QPointF(24, y), QPointF(self.width() - 24, y))
+        if not self.strokes:
+            p.setPen(QColor(0, 0, 0, 90))
+            p.drawText(self.rect(), Qt.AlignCenter, tr("Sign here with the mouse"))
+        self._draw(p, 1.0)
+
+    def image(self) -> Image.Image:
+        k = 3.0
+        img = QImage(int(self.width() * k), int(self.height() * k), QImage.Format_ARGB32_Premultiplied)
+        img.fill(Qt.transparent)
+        p = QPainter(img)
+        self._draw(p, k)
+        p.end()
+        return pil_from_qimage(img)
+
+
+class DrawSignatureWindow(GlassWindow):
+    def __init__(self, on_saved):
+        super().__init__(tr("Draw signature"), size=(640, 380))
+        self.on_saved = on_saved
+        self.pad = SignaturePad()
+        self.body.addWidget(self.pad, 1)
+        row = QHBoxLayout()
+        for name, col in ((tr("Black"), "#111111"), (tr("Blue"), "#10224d")):
+            b = QPushButton(name)
+            b.clicked.connect(lambda _=False, c=col: (setattr(self.pad, "color", QColor(c)), self.pad.update()))
+            row.addWidget(b)
+        clear = QPushButton(tr("Clear"))
+        clear.clicked.connect(self.pad.clear)
+        row.addWidget(clear)
+        row.addStretch(1)
+        cancel = QPushButton(tr("Cancel"))
+        cancel.clicked.connect(self.close)
+        row.addWidget(cancel)
+        ok = QPushButton(tr("Save signature"))
+        ok.setObjectName("primary")
+        ok.clicked.connect(self.save)
+        row.addWidget(ok)
+        self.body.addLayout(row)
+
+    def save(self):
+        if not self.pad.strokes:
+            return
+        self.on_saved(imaging.save_signature(self.pad.image()))
+        self.close()
+
+
+class SignView(SnipView):
+    """Page preview; the selection box is where the signature goes (aspect locked)."""
+
+    def __init__(self, image: QImage):
+        super().__init__(image, 1.0)
+        self.sig: QPixmap | None = None
+
+    def set_signature(self, pm: QPixmap | None):
+        self.sig = pm
+        if pm is not None and not pm.isNull():
+            self.ratio = pm.width() / max(1, pm.height())
+            if self.has_selection():                 # keep the centre, adapt the height
+                c, w = self.sel.center(), self.sel.width()
+                h = w / self.ratio
+                self.sel = QRectF(c.x() - w / 2, c.y() - h / 2, w, h)
+        self.update()
+        self.changed.emit()
+
+    def mouseReleaseEvent(self, e):
+        # a plain click (no drag) places the signature at a default size, centred on the click
+        if self._mode == "new" and not self.has_selection() and self.ratio:
+            p = self.clamp_image(self.to_image(e.position()))
+            W, H = self.image.width(), self.image.height()
+            w = W * 0.28
+            h = w / self.ratio
+            r = QRectF(p.x() - w / 2, p.y() - h / 2, w, h)
+            r.moveLeft(min(max(r.left(), 0), W - w))
+            r.moveTop(min(max(r.top(), 0), H - h))
+            self.sel = r
+            self.update()
+            self.changed.emit()
+        super().mouseReleaseEvent(e)
+
+    def paint_overlay(self, p: QPainter, t: QRectF):
+        if not self.has_selection():
+            hint = tr("Click or drag on the page to place the signature") if self.sig else tr("Pick or create a signature first")
+            f = QFont(ui_family(False))
+            f.setPixelSize(13)
+            f.setBold(True)
+            p.setFont(f)
+            w = p.fontMetrics().horizontalAdvance(hint) + 28
+            badge = QRectF(t.center().x() - w / 2, t.top() + 14, w, 28)
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor(20, 16, 32, 200))
+            p.drawRoundedRect(badge, 14, 14)
+            p.setPen(QColor(255, 255, 255))
+            p.drawText(badge, Qt.AlignCenter, hint)
+            return
+        r = self.rect_to_widget(self.sel)
+        if self.sig is not None:
+            p.drawPixmap(r, self.sig, QRectF(self.sig.rect()))
+        p.setPen(QPen(QColor(90, 170, 255, 220), 1.2, Qt.DashLine))
+        p.setBrush(Qt.NoBrush)
+        p.drawRect(r)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor("#5aaaff"))
+        for pt in (r.topLeft(), r.topRight(), r.bottomLeft(), r.bottomRight()):
+            p.drawEllipse(pt, 5, 5)
+
+
+class SignWindow(ToolWindow):
+    tool_name = "Sign"
+    PREVIEW_DPI = 100
+
+    def __init__(self, path, notify):
+        super().__init__("Sign PDF", path, notify, size=(860, 940))
+        self.n_pages = imaging.pdf_page_count(path)
+        self.page = 0
+        self.sig_path: Path | None = None
+
+        self.sig_row = QHBoxLayout()
+        self.sig_row.setSpacing(6)
+        self.body.addLayout(self.sig_row)
+
+        self.view = SignView(QImage())
+        self.view.setMinimumSize(420, 420)
+        self.body.addWidget(self.view, 1)
+
+        nav = QHBoxLayout()
+        self.prev_btn = QPushButton("◀")
+        self.next_btn = QPushButton("▶")
+        self.prev_btn.clicked.connect(lambda: self.go(self.page - 1))
+        self.next_btn.clicked.connect(lambda: self.go(self.page + 1))
+        self.page_label = QLabel()
+        self.page_label.setMinimumWidth(130)
+        self.page_label.setAlignment(Qt.AlignCenter)
+        nav.addWidget(self.prev_btn)
+        nav.addWidget(self.page_label)
+        nav.addWidget(self.next_btn)
+        nav.addSpacing(16)
+        self.all_pages = QCheckBox(tr("Same place on every page"))
+        nav.addWidget(self.all_pages)
+        nav.addStretch(1)
+        self.body.addLayout(nav)
+        QShortcut(QKeySequence(Qt.Key_PageUp), self, activated=lambda: self.go(self.page - 1))
+        QShortcut(QKeySequence(Qt.Key_PageDown), self, activated=lambda: self.go(self.page + 1))
+        self.body.addLayout(self.footer("Sign", self.save, self.view.reset_sel))
+        self.view.changed.connect(self._update)
+        self._build_sig_row()
+        self.go(self.n_pages - 1)       # signatures usually go on the last page
+
+    # ------------------------------------------------------------ signatures
+    def _build_sig_row(self, select: Path | None = None):
+        while self.sig_row.count():
+            w = self.sig_row.takeAt(0).widget()
+            if w is not None:
+                w.deleteLater()
+        self.sig_group = QButtonGroup(self)
+        self.sig_group.setExclusive(True)
+        sigs = imaging.list_signatures()
+        self._sigs = sigs
+        for i, p in enumerate(sigs[:6]):
+            b = QPushButton()
+            b.setCheckable(True)
+            pm = QPixmap(str(p))
+            b.setIcon(QIcon(pm))
+            b.setIconSize(QSize(110, 34))
+            b.setMinimumHeight(46)
+            b.setToolTip(p.stem)
+            b.setStyleSheet("QPushButton { background: rgba(255,255,255,0.85); border-radius: 8px; }"
+                            "QPushButton:checked { border: 2px solid #5aaaff; }")
+            self.sig_group.addButton(b, i)
+            self.sig_row.addWidget(b)
+        self.sig_group.idClicked.connect(lambda i: self._use(self._sigs[i]))
+        draw = QPushButton(tr("✎ Draw"))
+        draw.clicked.connect(self._draw)
+        imp = QPushButton(tr("⬆ From photo"))
+        imp.setToolTip(tr("Photo or scan of your signature on white paper"))
+        imp.clicked.connect(self._import)
+        self.sig_row.addWidget(draw)
+        self.sig_row.addWidget(imp)
+        if sigs:
+            rm = QPushButton("🗑")
+            rm.setToolTip(tr("Delete the selected signature"))
+            rm.clicked.connect(self._delete)
+            self.sig_row.addWidget(rm)
+        self.sig_row.addStretch(1)
+        target = select if select in sigs else (sigs[0] if sigs else None)
+        if target is not None:
+            self.sig_group.button(sigs.index(target)).setChecked(True)
+            self._use(target)
+        else:
+            self.sig_path = None
+            self.view.set_signature(None)
+
+    def _use(self, p: Path):
+        self.sig_path = p
+        self.view.set_signature(QPixmap(str(p)))
+
+    def _draw(self):
+        w = DrawSignatureWindow(lambda p: self._build_sig_row(p))
+        w.setWindowModality(Qt.ApplicationModal)
+        self._child = w
+        w.show()
+
+    def _import(self):
+        from PySide6.QtWidgets import QFileDialog
+        f, _ = QFileDialog.getOpenFileName(self, tr("Photo of your signature"), str(Path.home()),
+                                           "Images (*.png *.jpg *.jpeg *.heic *.webp *.bmp)")
+        if not f:
+            return
+        try:
+            p = imaging.save_signature(imaging.signature_from_photo(open_image(f)))
+        except UserError as e:
+            self.subtitle.setText(tr(str(e)))
+            return
+        self._build_sig_row(p)
+
+    def _delete(self):
+        if self.sig_path and self.sig_path.exists():
+            self.sig_path.unlink()
+        self._build_sig_row()
+
+    # ------------------------------------------------------------ pages
+    def go(self, page: int):
+        if not 0 <= page < self.n_pages:
+            return
+        keep = self.view.sel if self.view.has_selection() else None
+        old = (self.view.image.width(), self.view.image.height()) if not self.view.image.isNull() else None
+        self.page = page
+        im = imaging.render_pdf_page(self.path, page, self.PREVIEW_DPI)
+        self.view.set_image(qimage_from_pil(im))
+        if keep is not None and old:            # keep the box at the same relative place
+            kx, ky = im.width / old[0], im.height / old[1]
+            self.view.sel = QRectF(keep.left() * kx, keep.top() * ky, keep.width() * kx, keep.width() * kx / (self.view.ratio or 1))
+        self.page_label.setText(tr("Page {p} of {n}", p=page + 1, n=self.n_pages))
+        self.prev_btn.setEnabled(page > 0)
+        self.next_btn.setEnabled(page < self.n_pages - 1)
+        self._update()
+
+    def _update(self, *_):
+        if self.primary_btn is not None:
+            self.primary_btn.setEnabled(self.view.has_selection() and self.sig_path is not None)
+
+    def save(self):
+        if not (self.view.has_selection() and self.sig_path):
+            return
+        s, W, H = self.view.sel, self.view.image.width(), self.view.image.height()
+        frac = (s.left() / W, s.top() / H, s.right() / W, s.bottom() / H)
+        page = None if self.all_pages.isChecked() else self.page
+        path, sig = self.path, self.sig_path
+        self.run(lambda: [imaging.sign_pdf(path, sig, page, frac)], "Signing…",
+                 tr("every page") if page is None else tr("page {n}", n=self.page + 1))

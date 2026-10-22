@@ -683,7 +683,8 @@ def selftest() -> int:
                       tools.ResizeWindow([str(src)], n), tools.ProtectWindow(str(pdf), n),
                       tools.PdfSnipWindow(str(pdf), n), tools.OrganizeWindow([str(pdf)], n),
                       tools.UnlockWindow(str(pdf), n), tools.RenameWindow([str(src), str(pdf)], n),
-                      tools.CompressPdfWindow([str(pdf)], n), tools.SignWindow(str(pdf), n)):
+                      tools.CompressPdfWindow([str(pdf)], n), tools.SignWindow(str(pdf), n),
+                      tools.PeekWindow(str(Path(d) / "n.txt"), n)):
                 w.close()
             ToastStack().info("ok", "ok").dismiss()
             check_text_renders()

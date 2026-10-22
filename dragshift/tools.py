@@ -138,7 +138,7 @@ class ToolWindow(GlassWindow):
         if self.primary_btn is not None and self.primary_btn.isEnabled():
             self.primary_btn.click()
 
-    def footer(self, primary_text: str, on_primary, on_reset=None, extra_buttons=()) -> QHBoxLayout:
+    def footer(self, primary_text: str, on_primary, on_reset=None, extra_buttons=(), cancel=True) -> QHBoxLayout:
         row = QHBoxLayout()
         if on_reset:
             reset = QPushButton(tr("Reset"))
@@ -147,9 +147,10 @@ class ToolWindow(GlassWindow):
         for b in extra_buttons:
             row.addWidget(b)
         row.addStretch(1)
-        cancel = QPushButton(tr("Cancel"))
-        cancel.clicked.connect(self.close)
-        row.addWidget(cancel)
+        if cancel:
+            cb = QPushButton(tr("Cancel"))
+            cb.clicked.connect(self.close)
+            row.addWidget(cb)
         ok = QPushButton(tr(primary_text))
         ok.setObjectName("primary")
         ok.clicked.connect(on_primary)
@@ -2341,7 +2342,7 @@ class PeekWindow(ToolWindow):
         copy = QPushButton(tr("Copy column list"))
         copy.setToolTip(tr("Name and type of every column, to paste anywhere"))
         copy.clicked.connect(self.copy_schema)
-        self.body.addLayout(self.footer("Close", self.close, None, [copy]))
+        self.body.addLayout(self.footer("Close", self.close, None, [copy], cancel=False))
         self.info = None
         from . import data
         p = str(self.path)

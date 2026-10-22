@@ -32,7 +32,7 @@ IPC_NAME = ipc_name()
 
 GLYPHS = {"Compress": "⇲", "Metadata": "ⓘ", "Redact": "▮", "Crop": "⌗", "Edit": "☼",
           "Annotate": "✎", "Add BG": "▣", "Resize": "⤢", "Split": "✂", "Rotate": "⟳",
-          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚", "Text": "¶", "Unlock": "⚷", "Organize": "▦", "OCR": "⌕", "Cutout": "✂", "Rename": "✎", "Sign": "✍"}
+          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚", "Text": "¶", "Unlock": "⚷", "Organize": "▦", "OCR": "⌕", "Cutout": "✂", "Rename": "✎", "Sign": "✍", "Peek": "◉", "Combine": "⊕"}
 
 HINTS = {
     "Compress": "Shrink file size", "Metadata": "View · remove GPS", "Redact": "Hide private info",
@@ -46,12 +46,14 @@ HINTS = {
     "Cutout": "Remove the background (AI)",
     "Rename": "Rename all with a pattern",
     "Sign": "Place your signature",
+    "Peek": "Columns, types, empty values",
+    "Combine": "Stack into one file",
 }
 FORMAT_HINTS = {"JPG": "Small, universal", "PNG": "Lossless · transparency", "WEBP": "Smallest for web",
                 "HEIC": "iPhone format", "TIFF": "Print · archival", "AVIF": "Next-gen, tiny",
                 "BMP": "Uncompressed", "PDF": "Document", "ICO": "Windows icon", "GIF": "Legacy web",
                 "DOCX": "Editable Word", "TXT": "Plain text", "XLSX": "Excel spreadsheet",
-                "CSV": "Comma/semicolon text", "MP4": "Plays everywhere", "MP3": "Audio only",
+                "CSV": "Comma/semicolon text", "PARQUET": "Columnar, for data tools", "JSON": "For APIs and code", "MP4": "Plays everywhere", "MP3": "Audio only",
                 "WAV": "Uncompressed audio", "M4A": "Apple / small audio"}
 
 IMAGE_TOOLS = ["Compress", "Resize", "Crop", "Edit", "Annotate", "Redact", "Cutout", "Add BG", "Text", "Metadata"]
@@ -264,6 +266,10 @@ class DragShiftApp(QObject):
         rings: dict[str, list[Item]] = {"Convert": convert_items}
         if cat == "image":
             rings["Tools"] = [Item(n, GLYPHS[n], key=f"tool:{n}", hint=HINTS[n]) for n in IMAGE_TOOLS]
+        elif cat == "sheet":
+            rings["Tools"] = [Item("Peek", GLYPHS["Peek"], key="tool:Peek", hint=HINTS["Peek"])]
+            if len(same) > 1:
+                rings["Tools"].append(Item("Combine", GLYPHS["Combine"], key="tool:Combine", hint=HINTS["Combine"]))
         elif cat == "video":
             rings["Tools"] = [Item("Compress", GLYPHS["Compress"], key="tool:Compress", hint=tr("Smaller MP4 (720p)"))]
             for it in convert_items:
@@ -292,6 +298,14 @@ class DragShiftApp(QObject):
         kind, name = item.key.split(":", 1)
         if cat in ("video", "audio"):
             self.run_media(kind, name, cat, paths)
+            return
+        if cat == "sheet" and kind == "tool":
+            if name == "Peek":
+                self.open_window(tools.PeekWindow(paths[0], self.notify))
+            elif name == "Combine":
+                from . import data
+                self.submit("tool:Combine", paths, lambda: data.combine_files(paths),
+                            tr("Combining {n} files…", n=len(paths)))
             return
         if kind == "convert":
             if cat == "image" and name == "PDF" and len(paths) > 1:

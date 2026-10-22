@@ -241,7 +241,11 @@ def sheet_to_pdf(src: str | Path) -> list[Path]:
 
 
 def convert_sheet(src: str | Path, target: str) -> list[Path]:
+    from . import data
     target = target.upper()
+    k = data.kind(src)
+    if k in ("parquet", "json") or target in ("PARQUET", "JSON"):
+        return data.convert_data(src, target)
     if target == "PDF":
         return sheet_to_pdf(src)
     if target == "XLSX":

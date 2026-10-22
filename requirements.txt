@@ -6,6 +6,7 @@ numpy>=1.26
 python-docx>=1.1
 openpyxl>=3.1
 imageio-ffmpeg>=0.5
+pyarrow>=15
 pywin32>=306; sys_platform == "win32"
 pyobjc-framework-Cocoa>=10; sys_platform == "darwin"
 pyobjc-framework-Quartz>=10; sys_platform == "darwin"

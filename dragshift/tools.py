@@ -2311,3 +2311,81 @@ class SignWindow(ToolWindow):
         path, sig = self.path, self.sig_path
         self.run(lambda: [imaging.sign_pdf(path, sig, page, frac)], "Signing…",
                  tr("every page") if page is None else tr("page {n}", n=self.page + 1))
+
+
+# ================================================================ PEEK DATA
+class PeekWindow(ToolWindow):
+    """Columns (type, nulls, distinct, min/max, example) and the first rows of a data file."""
+    tool_name = "Peek"
+
+    def __init__(self, path, notify):
+        super().__init__("Peek data", path, notify, size=(900, 640))
+        self.summary = QLabel(tr("Reading…"))
+        self.summary.setObjectName("big")
+        self.body.addWidget(self.summary)
+        row, self.tab = toggle_row(["Columns", "First rows"])
+        self.tab.idClicked.connect(self._show_tab)
+        self.body.addLayout(row)
+        self.cols_table = QTableWidget(0, 7)
+        self.cols_table.setHorizontalHeaderLabels([tr("Column"), tr("Type"), tr("Empty"), tr("Distinct"),
+                                                   tr("Min"), tr("Max"), tr("Example")])
+        self.rows_table = QTableWidget(0, 0)
+        for t in (self.cols_table, self.rows_table):
+            t.verticalHeader().setVisible(False)
+            t.setEditTriggers(QTableWidget.NoEditTriggers)
+            t.setAlternatingRowColors(False)
+            self.body.addWidget(t, 1)
+        self.cols_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.cols_table.horizontalHeader().setStretchLastSection(True)
+        self.rows_table.setVisible(False)
+        copy = QPushButton(tr("Copy column list"))
+        copy.setToolTip(tr("Name and type of every column, to paste anywhere"))
+        copy.clicked.connect(self.copy_schema)
+        self.body.addLayout(self.footer("Close", self.close, None, [copy]))
+        self.info = None
+        from . import data
+        p = str(self.path)
+        run_in_background(lambda: data.peek(p), self._fill, lambda msg: self.summary.setText(msg))
+
+    def _show_tab(self, i):
+        self.cols_table.setVisible(i == 0)
+        self.rows_table.setVisible(i == 1)
+
+    @staticmethod
+    def _fmt(v) -> str:
+        from .sheets import fmt_cell
+        if v is None:
+            return ""
+        s = fmt_cell(v) if not isinstance(v, (dict, list)) else str(v)
+        return s if len(s) <= 80 else s[:79] + "…"
+
+    def _fill(self, info):
+        self.info = info
+        n, m = info["rows"], info["cols"]
+        self.summary.setText(tr("{rows} rows × {cols} columns", rows=f"{n:,}".replace(",", "."), cols=m))
+        t = self.cols_table
+        t.setRowCount(len(info["columns"]))
+        for i, c in enumerate(info["columns"]):
+            nulls = c["nulls"]
+            pct = f" ({nulls * 100 / n:.0f}%)" if n and nulls else ""
+            vals = [c["name"], tr(c["type"]), f"{nulls}{pct}", "" if c["distinct"] is None else str(c["distinct"]),
+                    self._fmt(c["min"]), self._fmt(c["max"]), self._fmt(c["example"])]
+            for j, v in enumerate(vals):
+                it = QTableWidgetItem(v)
+                if j == 2 and n and nulls == n:
+                    it.setForeground(QColor("#ffb36b"))       # column is entirely empty
+                t.setItem(i, j, it)
+        r = self.rows_table
+        r.setColumnCount(len(info["header"]))
+        r.setHorizontalHeaderLabels([str(h) for h in info["header"]])
+        r.setRowCount(len(info["preview"]))
+        for i, row in enumerate(info["preview"]):
+            for j, v in enumerate(row):
+                r.setItem(i, j, QTableWidgetItem(self._fmt(v)))
+        r.resizeColumnsToContents()
+
+    def copy_schema(self):
+        if not self.info:
+            return
+        lines = [f"{c['name']}\t{c['type']}" for c in self.info["columns"]]
+        QGuiApplication.clipboard().setText("\n".join(lines))

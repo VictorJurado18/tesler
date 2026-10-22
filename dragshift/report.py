@@ -44,6 +44,14 @@ def pages(path: Path) -> int | None:
         return None
 
 
+def _count_rows(path: Path) -> int | None:
+    try:
+        from .data import load_table
+        return load_table(path).num_rows
+    except Exception:
+        return None
+
+
 def size_change(before: int, after: int) -> tuple[str, str]:
     """('2.4 MB → 610 KB', '75% smaller') — second part empty if no meaningful change."""
     text = f"{human_size(before)} → {human_size(after)}"
@@ -147,6 +155,11 @@ def summarize(action: str, srcs: list, outs: list, extra: str = "") -> Result:
         else:
             label = tr("PDFs merged") if len(srcs) > 1 else tr("Pages organized")
         return Result(label, f"{plural(n or 0, '{n} page', '{n} pages')} · {human_size(after)} · {o0.name}", outs, srcs)
+
+    if name == "Combine":
+        rows = _count_rows(o0)
+        detail = (plural(rows, "{n} row", "{n} rows") + " · " if rows is not None else "") + o0.name
+        return Result(tr("Combined {n} files", n=len(srcs)), detail, outs, srcs, good=tr("+ source column"))
 
     if name == "Sign":
         return Result(tr("PDF signed"), f"{extra} · {o0.name}" if extra else o0.name, outs, srcs)

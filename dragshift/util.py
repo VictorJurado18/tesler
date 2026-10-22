@@ -8,8 +8,8 @@ IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".heic", ".heif", ".tif", ".tiff
               ".avif", ".bmp", ".gif", ".ico"}
 PDF_EXTS = {".pdf"}
 DOCX_EXTS = {".docx"}
-TEXT_EXTS = {".txt", ".md", ".log", ".json", ".xml", ".html", ".htm"}
-SHEET_EXTS = {".csv", ".tsv", ".xlsx", ".xlsm"}
+TEXT_EXTS = {".txt", ".md", ".log", ".xml", ".html", ".htm"}
+SHEET_EXTS = {".csv", ".tsv", ".xlsx", ".xlsm", ".parquet", ".pq", ".json", ".jsonl", ".ndjson"}
 
 
 def category(path: str | Path) -> str | None:

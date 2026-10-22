@@ -11,8 +11,10 @@ from dragshift.util import category
 
 def test_category_and_targets():
     assert category("a.csv") == category("b.xlsx") == "sheet"
-    assert convert.targets_for("sheet", ".csv") == ["XLSX", "PDF"]
-    assert convert.targets_for("sheet", ".xlsx") == ["CSV", "PDF"]
+    assert convert.targets_for("sheet", ".csv") == ["XLSX", "PDF", "PARQUET", "JSON"]
+    assert convert.targets_for("sheet", ".xlsx") == ["CSV", "PDF", "PARQUET", "JSON"]
+    assert convert.targets_for("sheet", ".parquet") == ["CSV", "XLSX", "JSON"]
+    assert category("d.parquet") == category("e.json") == "sheet"
 
 
 def test_brazilian_csv_to_xlsx(tmp_path: Path):

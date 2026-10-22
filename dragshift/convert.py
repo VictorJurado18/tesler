@@ -383,7 +383,7 @@ def targets_for(cat: str, src_ext: str) -> list[str]:
             t = [x for x in t if x != "HEIC"]
         return t
     if cat == "sheet":
-        from .sheets import targets
+        from .data import targets
         return targets("." + src_ext)
     if cat in ("video", "audio"):
         from .media import targets as media_targets

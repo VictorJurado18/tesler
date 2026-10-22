@@ -147,6 +147,13 @@ def summarize(action: str, srcs: list, outs: list, extra: str = "") -> Result:
             label = tr("PDFs merged") if len(srcs) > 1 else tr("Pages organized")
         return Result(label, f"{plural(n or 0, '{n} page', '{n} pages')} · {human_size(after)} · {o0.name}", outs, srcs)
 
+    if name == "Cutout":
+        if len(outs) > 1:
+            return Result(tr("Background removed from {n} images", n=len(outs)), human_size(after), outs, srcs,
+                          good=tr("transparent PNG"))
+        return Result(tr("Background removed"), f"{_dim_str(dims(o0))} · {human_size(after)} · {o0.name}", outs, srcs,
+                      good=tr("transparent PNG"))
+
     if name == "OCR":
         n = pages(o0)
         return Result(tr("Searchable PDF"), f"{plural(n or 0, '{n} page', '{n} pages')} · {o0.name}", outs, srcs,

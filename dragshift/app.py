@@ -32,7 +32,7 @@ IPC_NAME = ipc_name()
 
 GLYPHS = {"Compress": "⇲", "Metadata": "ⓘ", "Redact": "▮", "Crop": "⌗", "Edit": "☼",
           "Annotate": "✎", "Add BG": "▣", "Resize": "⤢", "Split": "✂", "Rotate": "⟳",
-          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚", "Text": "¶", "Unlock": "⚷", "Organize": "▦", "OCR": "⌕"}
+          "Merge": "⧉", "Protect": "⚿", "Extract": "⧈", "Snip": "⬚", "Text": "¶", "Unlock": "⚷", "Organize": "▦", "OCR": "⌕", "Cutout": "✂"}
 
 HINTS = {
     "Compress": "Shrink file size", "Metadata": "View · remove GPS", "Redact": "Hide private info",
@@ -43,13 +43,14 @@ HINTS = {
     "Text": "Copy the text (OCR)", "Unlock": "Remove the password",
     "Organize": "Reorder · rotate · delete · extract",
     "OCR": "Make a scan searchable",
+    "Cutout": "Remove the background (AI)",
 }
 FORMAT_HINTS = {"JPG": "Small, universal", "PNG": "Lossless · transparency", "WEBP": "Smallest for web",
                 "HEIC": "iPhone format", "TIFF": "Print · archival", "AVIF": "Next-gen, tiny",
                 "BMP": "Uncompressed", "PDF": "Document", "ICO": "Windows icon", "GIF": "Legacy web",
                 "DOCX": "Editable Word", "TXT": "Plain text"}
 
-IMAGE_TOOLS = ["Compress", "Resize", "Crop", "Edit", "Annotate", "Redact", "Add BG", "Text", "Metadata"]
+IMAGE_TOOLS = ["Compress", "Resize", "Crop", "Edit", "Annotate", "Redact", "Cutout", "Add BG", "Text", "Metadata"]
 PDF_TOOLS = ["Snip", "Organize", "OCR", "Compress", "Split", "Rotate", "Protect", "Extract", "Metadata"]
 
 
@@ -57,6 +58,10 @@ PDF_TOOLS = ["Snip", "Organize", "OCR", "Compress", "Split", "Rotate", "Protect"
 class _Sig(QObject):
     done = Signal(object)
     failed = Signal(str)
+
+
+class _Progress(QObject):
+    changed = Signal(str, str)
 
 
 class Job(QRunnable):
@@ -312,6 +317,9 @@ class DragShiftApp(QObject):
         if name == "Text":
             self.copy_image_text(paths)
             return
+        if name == "Cutout":
+            self.remove_backgrounds(paths)
+            return
         windows = {"Crop": tools.CropWindow, "Add BG": tools.AddBgWindow, "Annotate": tools.AnnotateWindow,
                    "Redact": tools.RedactWindow, "Edit": tools.EditWindow, "Metadata": tools.MetadataWindow}
         try:
@@ -347,6 +355,36 @@ class DragShiftApp(QObject):
                                             preview=preview[:90] + ("…" if len(preview) > 90 else "")), 6000)
 
         tools.run_in_background(work, done, lambda msg: card.error(tr("Couldn't read the text"), msg))
+
+    def remove_backgrounds(self, paths: list[str]):
+        """AI cut-out → transparent PNGs. The model is downloaded once (progress in the card)."""
+        from . import bgremove
+        from .convert import open_image, save_image
+        from .util import sibling
+        card = self.toasts.new()
+        names = Path(paths[0]).name if len(paths) == 1 else tr("{n} files", n=len(paths))
+        card.working(tr("Removing background…"), names)
+        relay = _Progress()
+        relay.changed.connect(lambda t, d: card.working(t, d))
+
+        def work():
+            if not bgremove.model_ready():
+                relay.changed.emit(tr("Downloading the AI model (once, ~170 MB)…"), "")
+                bgremove.download_model(lambda done, total: relay.changed.emit(
+                    tr("Downloading the AI model (once, ~170 MB)…"),
+                    f"{done * 100 // total}%" if total else human_size(done)))
+            outs = []
+            for i, p in enumerate(paths):
+                relay.changed.emit(tr("Removing background…"),
+                                   f"{i + 1}/{len(paths)} · {Path(p).name}" if len(paths) > 1 else Path(p).name)
+                cut = bgremove.trim_transparent(bgremove.remove_background(open_image(p)))
+                out = sibling(p, "No Background", ".png")
+                save_image(cut, out, "PNG")
+                outs.append(out)
+            return outs
+
+        tools.run_in_background(work, lambda outs: card.done(report.summarize("tool:Cutout", paths, outs)),
+                                lambda msg: card.error(tr("Couldn't remove the background"), msg))
 
     def open_window(self, w: QWidget):
         if hasattr(w, "submit"):

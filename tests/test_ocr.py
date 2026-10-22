@@ -137,3 +137,26 @@ def test_searchable_pdf_skips_text_pages(tmp_path):
     p = make_pdf(tmp_path / "t.pdf")
     with pytest.raises(UserError):
         ocr.make_searchable_pdf(p, ocr_lines=lambda im: [])
+
+
+def test_trim_transparent():
+    from dragshift import bgremove
+    im = Image.new("RGBA", (200, 100), (0, 0, 0, 0))
+    im.paste((255, 0, 0, 255), (50, 20, 90, 60))
+    assert bgremove.trim_transparent(im, pad=5).size == (50, 50)
+
+
+def test_download_rejects_corrupted(tmp_path, monkeypatch):
+    """A bad download never ends up as the model file."""
+    import io
+    from dragshift import bgremove
+    monkeypatch.setattr(bgremove, "models_dir", lambda: tmp_path)
+
+    class FakeResp(io.BytesIO):
+        headers = {"Content-Length": "4"}
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+    monkeypatch.setattr(bgremove.urllib.request, "urlopen", lambda *a, **k: FakeResp(b"junk"))
+    with pytest.raises(UserError):
+        bgremove.download_model()
+    assert not bgremove.model_ready() and not any(tmp_path.iterdir())

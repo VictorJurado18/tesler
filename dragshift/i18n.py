@@ -393,6 +393,20 @@ PT: dict[str, str] = {
     "No text found to recognise in this PDF.": "Nenhum texto encontrado para reconhecer neste PDF.",
     "This PDF already has selectable text.": "Este PDF já tem texto selecionável.",
 
+    # remove background
+    "Cutout": "Sem fundo",
+    "Remove the background (AI)": "Remover o fundo (IA)",
+    "Removing background…": "Removendo fundo…",
+    "Downloading the AI model (once, ~170 MB)…": "Baixando o modelo de IA (só uma vez, ~170 MB)…",
+    "No Background": "Sem fundo",
+    "Background removed": "Fundo removido",
+    "Background removed from {n} images": "Fundo removido de {n} imagens",
+    "transparent PNG": "PNG transparente",
+    "Couldn't remove the background": "Não foi possível remover o fundo",
+    "Couldn't download the background-removal model. Check your internet connection and try again.":
+        "Não foi possível baixar o modelo de remoção de fundo. Verifique a internet e tente de novo.",
+    "The downloaded model is corrupted. Try again.": "O modelo baixado veio corrompido. Tente de novo.",
+
     # unlock
     "Unlock": "Tirar senha",
     "Unlocked": "Sem senha",

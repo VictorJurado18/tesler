@@ -77,8 +77,12 @@ def hard_exit(code: int = 0):
     if os.name == "nt":
         try:
             import ctypes
-            k32 = ctypes.windll.kernel32
-            k32.TerminateProcess(k32.GetCurrentProcess(), int(code))
+            from ctypes import wintypes
+            k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            k32.GetCurrentProcess.restype = wintypes.HANDLE      # 64-bit pseudo-handle, not a C int
+            k32.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
+            k32.TerminateProcess.restype = wintypes.BOOL
+            k32.TerminateProcess(k32.GetCurrentProcess(), int(code) & 0xFFFFFFFF)
         except Exception:
             pass
     os._exit(int(code))

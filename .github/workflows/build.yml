@@ -34,10 +34,10 @@ jobs:
           QT_QPA_PLATFORM: offscreen
 
       - name: Build app folder (for the installer)
-        run: pyinstaller DragShift.spec --noconfirm
+        run: pyinstaller Tesler.spec --noconfirm
 
-      - name: Build portable DragShift.exe
-        run: pyinstaller DragShift.spec --noconfirm
+      - name: Build portable Tesler.exe
+        run: pyinstaller Tesler.spec --noconfirm
         env:
           ONEFILE: "1"
 
@@ -46,12 +46,12 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          foreach ($exe in @("dist\DragShift\DragShift.exe", "dist\DragShift.exe")) {
+          foreach ($exe in @("dist\Tesler\Tesler.exe", "dist\Tesler.exe")) {
             $p = Start-Process -FilePath $exe -ArgumentList "--selftest" -Wait -PassThru
             if ($p.ExitCode -ne 0) { throw "Self-test failed for $exe ($($p.ExitCode))" }
             "Self-test passed: $exe"
           }
-          "{0:N1} MB portable" -f ((Get-Item dist\DragShift.exe).Length / 1MB)
+          "{0:N1} MB portable" -f ((Get-Item dist\Tesler.exe).Length / 1MB)
 
       - name: Build installer
         shell: pwsh
@@ -61,33 +61,33 @@ jobs:
             choco install innosetup -y --no-progress | Out-Null
             $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           }
-          & $iscc installer\DragShift.iss
+          & $iscc installer\Tesler.iss
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
-          "{0:N1} MB installer" -f ((Get-Item dist\DragShift-Setup.exe).Length / 1MB)
+          "{0:N1} MB installer" -f ((Get-Item dist\Tesler-Setup.exe).Length / 1MB)
 
       - name: Test the installer (silent install, run, uninstall)
         shell: pwsh
         run: |
-          $p = Start-Process dist\DragShift-Setup.exe -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /TASKS=contextmenu" -Wait -PassThru
+          $p = Start-Process dist\Tesler-Setup.exe -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /TASKS=contextmenu" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "Install failed ($($p.ExitCode))" }
-          $app = "$env:LOCALAPPDATA\Programs\DragShift\DragShift.exe"
+          $app = "$env:LOCALAPPDATA\Programs\Tesler\Tesler.exe"
           if (-not (Test-Path $app)) { throw "App not installed" }
-          if (-not (Test-Path "HKCU:\Software\Classes\*\shell\DragShift\command")) { throw "Context menu not registered" }
+          if (-not (Test-Path "HKCU:\Software\Classes\*\shell\Tesler\command")) { throw "Context menu not registered" }
           $env:QT_QPA_PLATFORM = "offscreen"
           $t = Start-Process $app -ArgumentList "--selftest" -Wait -PassThru
           if ($t.ExitCode -ne 0) { throw "Installed app self-test failed" }
           Remove-Item Env:QT_QPA_PLATFORM
-          $u = Start-Process "$env:LOCALAPPDATA\Programs\DragShift\unins000.exe" -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES" -Wait -PassThru
+          $u = Start-Process "$env:LOCALAPPDATA\Programs\Tesler\unins000.exe" -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES" -Wait -PassThru
           Start-Sleep 3
-          if (Test-Path "HKCU:\Software\Classes\*\shell\DragShift") { throw "Uninstall left the context menu behind" }
+          if (Test-Path "HKCU:\Software\Classes\*\shell\Tesler") { throw "Uninstall left the context menu behind" }
           "Installer OK"
 
       - uses: actions/upload-artifact@v4
         with:
           name: windows
           path: |
-            dist/DragShift.exe
-            dist/DragShift-Setup.exe
+            dist/Tesler.exe
+            dist/Tesler-Setup.exe
 
       # Test-mode SignPath code signing: the unsigned executables are uploaded
       # as a ZIP artifact (upload-artifact archives by default, matching the
@@ -100,15 +100,15 @@ jobs:
         with:
           name: unsigned
           path: |
-            dist/DragShift.exe
-            dist/DragShift-Setup.exe
+            dist/Tesler.exe
+            dist/Tesler-Setup.exe
 
       - name: Submit test signing request to SignPath
         uses: signpath/github-action-submit-signing-request@v3
         with:
           api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
           organization-id: '9db07b33-5f87-47ac-b187-3dd1dfad5744'
-          project-slug: 'DragShift'
+          project-slug: 'Tesler'
           signing-policy-slug: 'test-signing'
           artifact-configuration-slug: 'zip-with-signed-executables'
           github-artifact-id: '${{ steps.upload-unsigned-artifact.outputs.artifact-id }}'
@@ -149,16 +149,16 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
 
-      - name: Build DragShift.app
-        run: pyinstaller DragShift.spec --noconfirm
+      - name: Build Tesler.app
+        run: pyinstaller Tesler.spec --noconfirm
 
       - name: Self-test the app bundle
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          dist/DragShift.app/Contents/MacOS/DragShift --selftest
-          codesign --verify --deep --verbose=2 dist/DragShift.app || true
-          /usr/libexec/PlistBuddy -c "Print :LSUIElement" dist/DragShift.app/Contents/Info.plist
+          dist/Tesler.app/Contents/MacOS/Tesler --selftest
+          codesign --verify --deep --verbose=2 dist/Tesler.app || true
+          /usr/libexec/PlistBuddy -c "Print :LSUIElement" dist/Tesler.app/Contents/Info.plist
 
       - name: Sign & notarize the app (only when Apple credentials are configured)
         env:
@@ -182,33 +182,33 @@ jobs:
           security list-keychains -d user -s $KC $(security list-keychains -d user | tr -d '"')
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KCPW" $KC
           # sign every nested binary first, then the bundle (hardened runtime + timestamp)
-          find dist/DragShift.app/Contents -type f \( -name "*.so" -o -name "*.dylib" -o -perm -111 \) -print0 |
+          find dist/Tesler.app/Contents -type f \( -name "*.so" -o -name "*.dylib" -o -perm -111 \) -print0 |
             xargs -0 -I{} codesign --force --timestamp --options runtime --entitlements installer/entitlements.plist --sign "$MACOS_SIGN_IDENTITY" "{}" || true
-          codesign --force --deep --timestamp --options runtime --entitlements installer/entitlements.plist --sign "$MACOS_SIGN_IDENTITY" dist/DragShift.app
-          codesign --verify --deep --strict --verbose=2 dist/DragShift.app
-          ditto -c -k --keepParent dist/DragShift.app DragShift.zip
-          xcrun notarytool submit DragShift.zip --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
-          xcrun stapler staple dist/DragShift.app
-          spctl --assess --type execute --verbose dist/DragShift.app
+          codesign --force --deep --timestamp --options runtime --entitlements installer/entitlements.plist --sign "$MACOS_SIGN_IDENTITY" dist/Tesler.app
+          codesign --verify --deep --strict --verbose=2 dist/Tesler.app
+          ditto -c -k --keepParent dist/Tesler.app Tesler.zip
+          xcrun notarytool submit Tesler.zip --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
+          xcrun stapler staple dist/Tesler.app
+          spctl --assess --type execute --verbose dist/Tesler.app
           echo "SIGNED=1" >> $GITHUB_ENV
 
-      - name: Make the .dmg (drag DragShift to Applications)
+      - name: Make the .dmg (drag Tesler to Applications)
         run: |
           mkdir -p dmg
-          cp -R dist/DragShift.app dmg/
+          cp -R dist/Tesler.app dmg/
           ln -s /Applications dmg/Applications
-          hdiutil create -volname "DragShift" -srcfolder dmg -ov -format UDZO "dist/DragShift-mac-${{ matrix.arch }}.dmg"
-          du -h "dist/DragShift-mac-${{ matrix.arch }}.dmg"
+          hdiutil create -volname "Tesler" -srcfolder dmg -ov -format UDZO "dist/Tesler-mac-${{ matrix.arch }}.dmg"
+          du -h "dist/Tesler-mac-${{ matrix.arch }}.dmg"
           if [ "$SIGNED" = "1" ]; then
-            codesign --force --timestamp --sign "${{ secrets.MACOS_SIGN_IDENTITY }}" "dist/DragShift-mac-${{ matrix.arch }}.dmg"
-            xcrun notarytool submit "dist/DragShift-mac-${{ matrix.arch }}.dmg" --apple-id "${{ secrets.APPLE_ID }}" --password "${{ secrets.APPLE_APP_PASSWORD }}" --team-id "${{ secrets.APPLE_TEAM_ID }}" --wait
-            xcrun stapler staple "dist/DragShift-mac-${{ matrix.arch }}.dmg"
+            codesign --force --timestamp --sign "${{ secrets.MACOS_SIGN_IDENTITY }}" "dist/Tesler-mac-${{ matrix.arch }}.dmg"
+            xcrun notarytool submit "dist/Tesler-mac-${{ matrix.arch }}.dmg" --apple-id "${{ secrets.APPLE_ID }}" --password "${{ secrets.APPLE_APP_PASSWORD }}" --team-id "${{ secrets.APPLE_TEAM_ID }}" --wait
+            xcrun stapler staple "dist/Tesler-mac-${{ matrix.arch }}.dmg"
           fi
 
       - uses: actions/upload-artifact@v4
         with:
           name: mac-${{ matrix.arch }}
-          path: dist/DragShift-mac-${{ matrix.arch }}.dmg
+          path: dist/Tesler-mac-${{ matrix.arch }}.dmg
 
   linux:
     # Built on Debian 12 (glibc 2.36): the .deb runs on Debian 12/13, Ubuntu 23.04+, Mint 22, MX 23…
@@ -245,12 +245,12 @@ jobs:
         run: /opt/venv/bin/python -m pytest -q
 
       - name: Build the app folder
-        run: /opt/venv/bin/pyinstaller DragShift.spec --noconfirm
+        run: /opt/venv/bin/pyinstaller Tesler.spec --noconfirm
 
       - name: Build the .deb
         run: |
           PATH=/opt/venv/bin:$PATH packaging/linux/build-deb.sh 1.2.0
-          dpkg-deb --info dist/DragShift-linux-amd64.deb
+          dpkg-deb --info dist/Tesler-linux-amd64.deb
           desktop-file-validate packaging/linux/dragshift.desktop
 
       - name: Install the .deb and self-test it
@@ -260,17 +260,17 @@ jobs:
           LC_ALL: C.UTF-8
         run: |
           mkdir -p e2e_linux_out
-          apt-get install -y -q ./dist/DragShift-linux-amd64.deb 2>&1 | tail -5
+          apt-get install -y -q ./dist/Tesler-linux-amd64.deb 2>&1 | tail -5
           test -x /usr/bin/dragshift
           set +e
           dragshift --selftest > e2e_linux_out/selftest.txt 2>&1
           rc=$?
           set -e
           echo "exit code $rc" >> e2e_linux_out/selftest.txt
-          cat ~/.local/share/DragShift/log.txt >> e2e_linux_out/selftest.txt 2>/dev/null || true
+          cat ~/.local/share/Tesler/log.txt >> e2e_linux_out/selftest.txt 2>/dev/null || true
           if [ $rc -ne 0 ]; then
             /opt/venv/bin/python -X faulthandler -m dragshift --selftest >> e2e_linux_out/selftest.txt 2>&1 || true
-            cat ~/.local/share/DragShift/log.txt >> e2e_linux_out/selftest.txt 2>/dev/null || true
+            cat ~/.local/share/Tesler/log.txt >> e2e_linux_out/selftest.txt 2>/dev/null || true
           fi
           cat e2e_linux_out/selftest.txt
           if [ $rc -ne 0 ]; then
@@ -314,7 +314,7 @@ jobs:
         if: always()
         with:
           name: linux-deb
-          path: dist/DragShift-linux-amd64.deb
+          path: dist/Tesler-linux-amd64.deb
 
   publish:
     needs: [windows, macos, linux]
@@ -333,27 +333,26 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: DragShift (latest build)
+          name: Tesler (latest build)
           make_latest: true
           body: |
             **Windows**
-            - **DragShift-Setup.exe** — recommended. Per-user install (no admin), Start menu, start with Windows, right-click "DragShift…" and Send To.
-            - **DragShift.exe** — portable.
+            - **Tesler-Setup.exe** — recommended. Per-user install (no admin), Start menu, start with Windows, right-click "Tesler…" and Send To.
+            - **Tesler.exe** — portable.
 
             **Mac** (macOS 11+). Easiest, with no security warning, is to paste into Terminal:
             `curl -fsSL https://raw.githubusercontent.com/llamaboi55/DragShift/main/install-mac.sh | bash`
 
             Or download:
-            - **DragShift-mac-apple-silicon.dmg** — M1/M2/M3/M4 Macs.
-            - **DragShift-mac-intel.dmg** — Intel Macs.
-            Open the .dmg and drag DragShift to Applications.
-            **First launch (until DragShift is notarized by Apple):** open DragShift once and click **Done** on the warning, then go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to "DragShift was blocked", and confirm. You only do this once.
-            Or in Terminal: `xattr -dr com.apple.quarantine /Applications/DragShift.app`
+            - **Tesler-mac-apple-silicon.dmg** — M1/M2/M3/M4 Macs.
+            - **Tesler-mac-intel.dmg** — Intel Macs.
+            Open the .dmg and drag Tesler to Applications.
+            **First launch (until Tesler is notarized by Apple):** open Tesler once and click **Done** on the warning, then go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to "Tesler was blocked", and confirm. You only do this once.
+            Or in Terminal: `xattr -dr com.apple.quarantine /Applications/Tesler.app`
 
             **Linux** (Debian 12+, Ubuntu 23.04+, Mint, MX… on X11 desktops such as XFCE, MATE, Cinnamon):
-            - **DragShift-linux-amd64.deb** — install with `sudo apt install ./DragShift-linux-amd64.deb`, then open DragShift from the app menu. Works with or without a compositor.
+            - **Tesler-linux-amd64.deb** — install with `sudo apt install ./Tesler-linux-amd64.deb`, then open Tesler from the app menu. Works with or without a compositor.
 
-            Enjoying DragShift? Tips are welcome: [Cash App $AtikaKadesha](https://cash.app/$AtikaKadesha) ♥
 
             Built automatically from commit ${{ github.sha }}.
           files: out/*

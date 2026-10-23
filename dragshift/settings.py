@@ -17,7 +17,8 @@ i18n_applied = [False]
 IS_WIN = sys.platform == "win32"
 IS_MAC = sys.platform == "darwin"
 IS_LINUX = sys.platform.startswith("linux")
-APP = "DragShift"
+APP = "Tesler"
+OLD_APP = "DragShift"
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 
 DEFAULTS = {
@@ -35,6 +36,11 @@ DEFAULTS = {
 class Settings:
     def __init__(self):
         self.q = QSettings(APP, APP)
+        if not self.q.allKeys():   # first run as Tesler: bring the Tesler settings along
+            old = QSettings(OLD_APP, OLD_APP)
+            for k in old.allKeys():
+                self.q.setValue(k, old.value(k))
+            migrate_autostart()
 
     def get(self, key):
         v = self.q.value(key, DEFAULTS[key])
@@ -88,6 +94,21 @@ def autostart_enabled() -> bool:
         return False
 
 
+def migrate_autostart():
+    """If the old Tesler entry starts with Windows, re-register it under the new name."""
+    if not IS_WIN:
+        return
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0,
+                            winreg.KEY_QUERY_VALUE | winreg.KEY_SET_VALUE) as k:
+            winreg.QueryValueEx(k, OLD_APP)
+            winreg.DeleteValue(k, OLD_APP)
+            winreg.SetValueEx(k, APP, 0, winreg.REG_SZ, launch_command())
+    except OSError:
+        pass
+
+
 def set_autostart(on: bool):
     if IS_LINUX:
         from . import platform_linux
@@ -112,7 +133,7 @@ def set_autostart(on: bool):
 
 TRIGGERS = ([("shift", "Shift ⇧"), ("ctrl", "Control ⌃"), ("alt", "Option ⌥")] if IS_MAC
             else [("shift", "Shift"), ("ctrl", "Ctrl"), ("alt", "Alt")])
-OUTPUTS = [("next", "Next to the original"), ("folder", "In a “DragShift” subfolder")]
+OUTPUTS = [("next", "Next to the original"), ("folder", "In a “Tesler” subfolder")]
 STYLES = [("native", "Native (Windows 11)"), ("classic", "Liquid glass (classic)")]
 THEMES = [("auto", "Same as Windows"), ("dark", "Dark"), ("light", "Light")]
 DPIS = [(150, "150 dpi · small"), (200, "200 dpi · balanced"), (300, "300 dpi · print")]
@@ -188,13 +209,13 @@ class SettingsWindow(GlassWindow):
         self.theme.currentIndexChanged.connect(lambda _: self._save("theme", self.theme.currentData()))
         grid.addWidget(self.theme, r, 1)
         r += 1
-        lang_hint = QLabel(tr("Takes effect after restarting DragShift"))
+        lang_hint = QLabel(tr("Takes effect after restarting Tesler"))
         lang_hint.setObjectName("dim")
         grid.addWidget(lang_hint, r, 1)
         r += 1
 
         if IS_WIN or IS_MAC or IS_LINUX:
-            self.auto = QCheckBox(tr("Start DragShift with Windows" if IS_WIN else "Open DragShift at login"))
+            self.auto = QCheckBox(tr("Start Tesler with Windows" if IS_WIN else "Open Tesler at login"))
             self.auto.setChecked(autostart_enabled())
             self.auto.toggled.connect(set_autostart)
             grid.addWidget(self.auto, r, 1)
@@ -209,8 +230,11 @@ class SettingsWindow(GlassWindow):
                 r += 1
         self.body.addLayout(grid)
         self.body.addStretch(1)
-        about = QLabel(tr("DragShift {v}  ·  originals are never modified", v=__version__))
+        about = QLabel(tr("Tesler {v}  ·  originals are never modified", v=__version__) + "<br>"
+                       + tr("Based on {link} by llamaboi55",
+                            link='<a href="https://github.com/llamaboi55/DragShift">DragShift</a>'))
         about.setObjectName("dim")
+        about.setOpenExternalLinks(True)
         done = QPushButton(tr("Done"))
         done.setObjectName("primary")
         done.clicked.connect(self.close)
@@ -223,7 +247,7 @@ class SettingsWindow(GlassWindow):
 
 class WelcomeWindow(GlassWindow):
     def __init__(self, settings: Settings, trigger_label: str = "Shift"):
-        super().__init__(tr("Welcome to DragShift"), size=(560, 430))
+        super().__init__(tr("Welcome to Tesler"), size=(560, 430))
         self.s = settings
         steps = [
             ("1", tr("Start dragging any file"), tr("in Finder or on the desktop" if IS_MAC else
@@ -258,7 +282,7 @@ class WelcomeWindow(GlassWindow):
             from . import platform_mac
             if not platform_mac.has_screen_recording():
                 note = QLabel(tr("Optional: allow Screen Recording so the glass can refract the windows "
-                                 "behind it (otherwise it shows your wallpaper). DragShift never saves or sends it."))
+                                 "behind it (otherwise it shows your wallpaper). Tesler never saves or sends it."))
                 note.setObjectName("dim")
                 note.setWordWrap(True)
                 self.body.addWidget(note)
@@ -269,7 +293,7 @@ class WelcomeWindow(GlassWindow):
             from . import platform_linux
             if platform_linux.is_wayland():
                 note = QLabel(tr("You're on a Wayland session: the Shift-while-dragging trigger needs X11 (e.g. XFCE). "
-                                 "Right-click a file → Open With → DragShift still works."))
+                                 "Right-click a file → Open With → Tesler still works."))
                 note.setObjectName("warn")
                 note.setWordWrap(True)
                 self.body.addWidget(note)

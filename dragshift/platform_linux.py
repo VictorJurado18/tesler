@@ -5,7 +5,7 @@
 * Compositing: XFCE often runs without a compositor (xfwm4 compositing off, or slow GPUs).
   Then translucent windows would show black corners, so callers shape windows with masks.
 * Wayland sessions don't expose global input state, so the Shift trigger is unavailable
-  there; right-click → Open With DragShift still works.
+  there; right-click → Open With Tesler still works.
 * Start at login: ~/.config/autostart/dragshift.desktop
 """
 from __future__ import annotations
@@ -153,7 +153,7 @@ def autostart_enabled() -> bool:
 def set_autostart(on: bool):
     if on:
         AUTOSTART.parent.mkdir(parents=True, exist_ok=True)
-        AUTOSTART.write_text("[Desktop Entry]\nType=Application\nName=DragShift\n"
+        AUTOSTART.write_text("[Desktop Entry]\nType=Application\nName=Tesler\n"
                              f"Exec={_exec()}\nIcon=dragshift\nX-GNOME-Autostart-enabled=true\n"
                              "Comment=Shift+drag file converter\n", encoding="utf-8")
     elif AUTOSTART.exists():

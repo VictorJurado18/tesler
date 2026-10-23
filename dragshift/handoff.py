@@ -1,5 +1,5 @@
-"""Instant hand-off: if DragShift is already running, pass files to it and exit *before*
-importing Qt. Right-click → DragShift / Send To then opens the menu in milliseconds."""
+"""Instant hand-off: if Tesler is already running, pass files to it and exit *before*
+importing Qt. Right-click → Tesler / Send To then opens the menu in milliseconds."""
 from __future__ import annotations
 
 import json
@@ -8,7 +8,7 @@ import sys
 
 
 def ipc_name() -> str:
-    return "DragShift-" + (os.environ.get("USERNAME") or os.environ.get("USER") or "user")
+    return "Tesler-" + (os.environ.get("USERNAME") or os.environ.get("USER") or "user")
 
 
 def try_handoff(argv: list[str]) -> bool:

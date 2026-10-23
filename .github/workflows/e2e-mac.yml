@@ -34,12 +34,12 @@ jobs:
         run: |
           curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/install-mac.sh" | bash
           sleep 6
-          pgrep -x DragShift && echo "DragShift is running"
-          if xattr -p com.apple.quarantine /Applications/DragShift.app 2>/dev/null; then
+          pgrep -x Tesler && echo "Tesler is running"
+          if xattr -p com.apple.quarantine /Applications/Tesler.app 2>/dev/null; then
             echo "::error::app is quarantined"; exit 1
           fi
-          spctl --assess --type execute /Applications/DragShift.app 2>&1 || true   # informational
-          pkill -x DragShift || true
+          spctl --assess --type execute /Applications/Tesler.app 2>&1 || true   # informational
+          pkill -x Tesler || true
           echo "installer OK"
 
       - name: Run end-to-end scenarios on the Finder desktop
@@ -88,10 +88,10 @@ jobs:
           python -c "from PIL import Image; Image.new('RGB',(800,600),(200,120,90)).save('/tmp/Photo.jpg')"
           curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/install-mac.sh" | bash || true
           sleep 6
-          /Applications/DragShift.app/Contents/MacOS/DragShift /tmp/Photo.jpg &
+          /Applications/Tesler.app/Contents/MacOS/Tesler /tmp/Photo.jpg &
           sleep 4
           screencapture -x out/before_release.png || true
-          pkill -x DragShift || true
+          pkill -x Tesler || true
           sleep 1
 
       - name: Menu from this commit

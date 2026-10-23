@@ -103,7 +103,7 @@ def test_output_folder_setting(tmp_path):
     CONFIG["output"] = "folder"
     try:
         out = convert.convert(p, "image", "PNG")[0]
-        assert out.parent.name == "DragShift"
+        assert out.parent.name == "Tesler"
     finally:
         CONFIG["output"] = "next"
 

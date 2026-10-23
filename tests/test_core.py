@@ -13,7 +13,7 @@ def img(tmp_path) -> Path:
     im = Image.new("RGBA", (640, 420), (255, 255, 255, 0))
     d = ImageDraw.Draw(im)
     d.rectangle((40, 40, 600, 380), fill=(255, 120, 80, 255))
-    d.text((60, 60), "DragShift test", fill=(0, 0, 0, 255))
+    d.text((60, 60), "Tesler test", fill=(0, 0, 0, 255))
     p = tmp_path / "Page 001.png"
     exif = Image.Exif()
     exif[0x010F] = "TestCam"  # Make
@@ -113,3 +113,13 @@ def test_shortcut_resolves_to_target(img, tmp_path):
     out = resolve_shortcuts([str(lnk)])
     assert Path(out[0]) == img and category(out[0]) == "image"
     assert resolve_shortcuts([str(img)]) == [str(img)]
+
+
+def test_data_folder_moves_from_dragshift(tmp_path, monkeypatch):
+    from dragshift.util import app_data_dir
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    (tmp_path / "DragShift" / "models").mkdir(parents=True)
+    (tmp_path / "DragShift" / "models" / "m.onnx").write_text("x")
+    d = app_data_dir()
+    assert d.name == "Tesler" and (d / "models" / "m.onnx").exists()
+    assert not (tmp_path / "DragShift").exists()

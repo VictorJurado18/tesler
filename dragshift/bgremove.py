@@ -2,12 +2,11 @@
 
 Model: IS-Net general use (same one the `rembg` project ships), run with onnxruntime,
 which is already installed as a PyMuPDF dependency. It is downloaded once (~170 MB) to
-%LOCALAPPDATA%\\DragShift\\models on first use.
+%LOCALAPPDATA%\\Tesler\\models on first use.
 """
 from __future__ import annotations
 
 import hashlib
-import os
 import threading
 import urllib.request
 from pathlib import Path
@@ -16,7 +15,7 @@ from typing import Callable
 import numpy as np
 from PIL import Image, ImageFilter
 
-from .util import UserError
+from .util import UserError, app_data_dir
 
 MODEL_URL = "https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx"
 MODEL_SHA256 = "60920e99c45464f2ba57bee2ad08c919a52bbf852739e96947fbb4358c0d964a"
@@ -28,7 +27,7 @@ _lock = threading.Lock()
 
 
 def models_dir() -> Path:
-    base = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "DragShift" / "models"
+    base = app_data_dir() / "models"
     base.mkdir(parents=True, exist_ok=True)
     return base
 

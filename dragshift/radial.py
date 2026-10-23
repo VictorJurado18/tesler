@@ -589,6 +589,9 @@ class RadialMenu(QWidget):
         f.setPixelSize(14)
         f.setWeight(QFont.DemiBold)
         fm = QFontMetrics(f)
+        while hov is not None and fm.horizontalAdvance(top) > w and f.pixelSize() > 11:
+            f.setPixelSize(f.pixelSize() - 1)   # tool names shrink to fit instead of being cut
+            fm = QFontMetrics(f)
         top = fm.elidedText(top, Qt.ElideMiddle, int(w))
         f2 = QFont(ui_family(False))
         f2.setPixelSize(11)

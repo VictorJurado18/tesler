@@ -53,20 +53,20 @@ PT: dict[str, str] = {
     "Tip the developer ♥": "Apoiar o desenvolvedor original ♥",
     "Quit {app}": "Sair do {app}",
     "{app} — press {key} while dragging a file": "{app} — aperte {key} enquanto arrasta um arquivo",
-    "DragShift is already running": "O DragShift já está aberto",
+    "Tesler is already running": "O Tesler já está aberto",
     "Drag any file and press {key}. It lives in the tray.":
         "Arraste qualquer arquivo e aperte {key}. Ele fica na bandeja do sistema.",
-    "DragShift is running": "O DragShift está rodando",
+    "Tesler is running": "O Tesler está rodando",
     "Drag any file, then press {key}.": "Arraste qualquer arquivo e aperte {key}.",
-    "Choose file(s) for DragShift": "Escolha arquivo(s) para o DragShift",
+    "Choose file(s) for Tesler": "Escolha arquivo(s) para o Tesler",
     "Couldn't open {name}": "Não foi possível abrir {name}",
     "Couldn't finish": "Não foi possível concluir",
     "Working…": "Processando…",
     "No permission to write next to this file. Try a folder you own, or set Settings → Save results → subfolder.":
         "Sem permissão para salvar ao lado deste arquivo. Use uma pasta sua ou mude em "
         "Configurações → Salvar resultados → subpasta.",
-    "This file doesn't look like an image DragShift can read.":
-        "Este arquivo não parece ser uma imagem que o DragShift consiga ler.",
+    "This file doesn't look like an image Tesler can read.":
+        "Este arquivo não parece ser uma imagem que o Tesler consiga ler.",
     "The file was moved or deleted.": "O arquivo foi movido ou apagado.",
     "Combining {n} images…": "Juntando {n} imagens…",
     "Converting to {name}…": "Convertendo para {name}…",
@@ -171,7 +171,7 @@ PT: dict[str, str] = {
     "…pressed while you’re dragging a file": "…pressionado enquanto você arrasta um arquivo",
     "Save results": "Salvar resultados",
     "Next to the original": "Ao lado do original",
-    "In a “DragShift” subfolder": "Numa subpasta “DragShift”",
+    "In a “Tesler” subfolder": "Numa subpasta “Tesler”",
     "JPG / WebP quality": "Qualidade JPG / WebP",
     "PDF → image resolution": "Resolução PDF → imagem",
     "150 dpi · small": "150 dpi · pequeno",
@@ -179,15 +179,15 @@ PT: dict[str, str] = {
     "300 dpi · print": "300 dpi · impressão",
     "Language": "Idioma",
     "Automatic (system)": "Automático (sistema)",
-    "Takes effect after restarting DragShift": "Vale depois de reiniciar o DragShift",
-    "Start DragShift with Windows": "Iniciar o DragShift com o Windows",
-    "Open DragShift at login": "Abrir o DragShift ao entrar",
+    "Takes effect after restarting Tesler": "Vale depois de reiniciar o Tesler",
+    "Start Tesler with Windows": "Iniciar o Tesler com o Windows",
+    "Open Tesler at login": "Abrir o Tesler ao entrar",
     "Enable full liquid glass…": "Ativar vidro líquido completo…",
     "Lets the glass refract the windows behind it (Screen Recording permission)":
         "Deixa o vidro refratar as janelas atrás dele (permissão de Gravação de Tela)",
-    "DragShift {v}  ·  originals are never modified": "DragShift {v}  ·  os originais nunca são alterados",
+    "Tesler {v}  ·  originals are never modified": "Tesler {v}  ·  os originais nunca são alterados",
     "Done": "Concluir",
-    "Welcome to DragShift": "Bem-vindo ao DragShift",
+    "Welcome to Tesler": "Bem-vindo ao Tesler",
     "Start dragging any file": "Comece a arrastar qualquer arquivo",
     "in Finder or on the desktop": "no Finder ou na mesa",
     "in your file manager (Thunar, Nautilus…)": "no gerenciador de arquivos (Thunar, Nautilus…)",
@@ -198,13 +198,13 @@ PT: dict[str, str] = {
     "the result is saved next to the original": "o resultado é salvo ao lado do original",
     "Tap {key} again": "Aperte {key} de novo",
     "to switch between Convert and Tools": "para alternar entre Converter e Ferramentas",
-    "Optional: allow Screen Recording so the glass can refract the windows behind it (otherwise it shows your wallpaper). DragShift never saves or sends it.":
+    "Optional: allow Screen Recording so the glass can refract the windows behind it (otherwise it shows your wallpaper). Tesler never saves or sends it.":
         "Opcional: permita a Gravação de Tela para o vidro refratar as janelas atrás dele (senão ele "
-        "mostra o papel de parede). O DragShift nunca salva nem envia nada.",
+        "mostra o papel de parede). O Tesler nunca salva nem envia nada.",
     "Allow Screen Recording…": "Permitir Gravação de Tela…",
-    "You're on a Wayland session: the Shift-while-dragging trigger needs X11 (e.g. XFCE). Right-click a file → Open With → DragShift still works.":
+    "You're on a Wayland session: the Shift-while-dragging trigger needs X11 (e.g. XFCE). Right-click a file → Open With → Tesler still works.":
         "Você está numa sessão Wayland: o atalho de Shift ao arrastar precisa de X11 (ex.: XFCE). "
-        "Botão direito no arquivo → Abrir com → DragShift continua funcionando.",
+        "Botão direito no arquivo → Abrir com → Tesler continua funcionando.",
     "Start with Windows": "Iniciar com o Windows",
     "Open at login": "Abrir ao entrar",
     "Got it": "Entendi",
@@ -428,10 +428,10 @@ PT: dict[str, str] = {
     "Smaller MP4 (720p)": "MP4 menor (720p)",
     "First {n} s, 640 px": "Primeiros {n} s, 640 px",
     "Compressing video…": "Comprimindo vídeo…",
-    "The video component isn't installed yet. Open DragShift with “Iniciar DragShift.bat” once to install it.":
-        "O componente de vídeo ainda não está instalado. Abra o DragShift uma vez pelo “Iniciar DragShift.bat” para instalar.",
-    "This file doesn't look like a video or audio DragShift can read.":
-        "Este arquivo não parece ser um vídeo ou áudio que o DragShift consiga ler.",
+    "The video component isn't installed yet. Open Tesler with “Iniciar Tesler.bat” once to install it.":
+        "O componente de vídeo ainda não está instalado. Abra o Tesler uma vez pelo “Iniciar Tesler.bat” para instalar.",
+    "This file doesn't look like a video or audio Tesler can read.":
+        "Este arquivo não parece ser um vídeo ou áudio que o Tesler consiga ler.",
     "This file has no video.": "Este arquivo não tem vídeo.",
     "This file has no audio.": "Este arquivo não tem áudio.",
 
@@ -539,8 +539,8 @@ PT: dict[str, str] = {
     "Name and type of every column, to paste anywhere": "Nome e tipo de cada coluna, para colar onde quiser",
     "Close": "Fechar",
     "{rows} rows × {cols} columns": "{rows} linhas × {cols} colunas",
-    "The data component isn't installed yet. Open DragShift with “Iniciar DragShift.bat” once to install it.":
-        "O componente de dados ainda não está instalado. Abra o DragShift uma vez pelo “Iniciar DragShift.bat” para instalar.",
+    "The data component isn't installed yet. Open Tesler with “Iniciar Tesler.bat” once to install it.":
+        "O componente de dados ainda não está instalado. Abra o Tesler uma vez pelo “Iniciar Tesler.bat” para instalar.",
     "This Parquet file couldn't be read.": "Não foi possível ler este arquivo Parquet.",
     "This JSON isn't a table (expected a list of records).": "Este JSON não é uma tabela (esperava uma lista de registros).",
 
@@ -564,13 +564,14 @@ PT: dict[str, str] = {
     # redesign
     "Minimize": "Minimizar",
     "flips": "troca",
+    "Based on {link} by llamaboi55": "Baseado no {link}, de llamaboi55",
     "Look": "Visual", "Native (Windows 11)": "Nativo (Windows 11)", "Liquid glass (classic)": "Vidro líquido (clássico)",
     "Theme": "Tema", "Same as Windows": "Igual ao Windows", "Dark": "Escuro", "Light": "Claro",
     "Arrow": "Seta", "Box": "Caixa", "Circle": "Círculo", "Pen": "Caneta", "Marker": "Marca-texto",
     "Text tool": "Texto", "Step": "Passo", "Flip": "Espelhar", "Delete": "Apagar", "Draw": "Desenhar",
     "From photo": "De uma foto", "Reverse order": "Inverter ordem",
     "Saved next to the original": "Salvo ao lado do original",
-    "Saved in a “DragShift” subfolder": "Salvo na subpasta “DragShift”",
+    "Saved in a “Tesler” subfolder": "Salvo na subpasta “Tesler”",
     "Compress image": "Comprimir imagem",
     "Compress images": "Comprimir imagens",
     "By quality": "Por qualidade",
@@ -609,8 +610,8 @@ PT: dict[str, str] = {
     "{n} characters, {src}: “{preview}”": "{n} caracteres, {src}: “{preview}”",
     "{n} characters: “{preview}”": "{n} caracteres: “{preview}”",
     "Text recognition (OCR) needs Windows 10 or 11.": "O reconhecimento de texto (OCR) precisa do Windows 10 ou 11.",
-    "The OCR component isn't installed yet. Open DragShift with “Iniciar DragShift.bat” once to install it.":
-        "O componente de OCR ainda não está instalado. Abra o DragShift uma vez pelo “Iniciar DragShift.bat” para instalar.",
+    "The OCR component isn't installed yet. Open Tesler with “Iniciar Tesler.bat” once to install it.":
+        "O componente de OCR ainda não está instalado. Abra o Tesler uma vez pelo “Iniciar Tesler.bat” para instalar.",
     "Windows has no OCR language installed. Add one in Settings → Time & language → Language (e.g. Português (Brasil)).":
         "O Windows não tem idioma de OCR instalado. Adicione em Configurações → Hora e idioma → Idioma (ex.: Português (Brasil)).",
 }

@@ -35,7 +35,7 @@ jobs:
           tag_name: demo-recording
           name: Demo recording (automated)
           prerelease: true
-          body: Screen recording of DragShift driven automatically on a Windows machine.
+          body: Screen recording of Tesler driven automatically on a Windows machine.
           files: demo_out/*
 
       - name: Save recording to the demo-output branch

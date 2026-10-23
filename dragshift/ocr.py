@@ -62,8 +62,8 @@ def windows_ocr_available() -> tuple[bool, str]:
     try:
         from winrt.windows.media.ocr import OcrEngine  # type: ignore  # noqa: F401
     except Exception:
-        return False, ("The OCR component isn't installed yet. Open DragShift with "
-                       "“Iniciar DragShift.bat” once to install it.")
+        return False, ("The OCR component isn't installed yet. Open Tesler with "
+                       "“Iniciar Tesler.bat” once to install it.")
     return True, ""
 
 

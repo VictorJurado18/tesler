@@ -21,7 +21,7 @@ class GlassWindow(QWidget):
 
     def __init__(self, title: str, parent=None, size=(760, 640)):
         super().__init__(parent)
-        self.setWindowTitle(f"{title} — DragShift")
+        self.setWindowTitle(f"{title} — Tesler")
         self.setWindowFlags(Qt.Window | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setObjectName("glassRoot")
@@ -207,21 +207,16 @@ GlassWindow._paint_classic = _classic_paint
 
 
 def app_mark(px: int) -> QPixmap:
-    """The app's small mark: a ring with a dot, in the accent colour."""
-    t = theme.current()
+    """The app's icon, small, for title bars."""
+    from pathlib import Path
+    from PySide6.QtSvg import QSvgRenderer
     dpr = 2.0
     pm = QPixmap(int(px * dpr), int(px * dpr))
     pm.setDevicePixelRatio(dpr)
     pm.fill(Qt.transparent)
     p = QPainter(pm)
     p.setRenderHint(QPainter.Antialiasing)
-    c = theme.qcolor(t.accent)
-    from PySide6.QtGui import QPen
-    p.setPen(QPen(c, px * 0.125))
-    p.drawEllipse(QPointF(px / 2, px / 2), px * 0.35, px * 0.35)
-    p.setPen(Qt.NoPen)
-    p.setBrush(c)
-    p.drawEllipse(QPointF(px / 2, px / 2), px * 0.125, px * 0.125)
+    QSvgRenderer(str(Path(__file__).with_name("assets") / "tesler.svg")).render(p, QRectF(0, 0, px, px))
     p.end()
     return pm
 

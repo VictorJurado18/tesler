@@ -24,8 +24,8 @@ def pa():
         import pyarrow
         return pyarrow
     except Exception as e:  # noqa: BLE001
-        raise UserError("The data component isn't installed yet. Open DragShift with "
-                        "“Iniciar DragShift.bat” once to install it.") from e
+        raise UserError("The data component isn't installed yet. Open Tesler with "
+                        "“Iniciar Tesler.bat” once to install it.") from e
 
 
 def kind(path: str | Path) -> str:

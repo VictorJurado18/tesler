@@ -1,125 +1,254 @@
-# DragShift (versão do Victor)
+<p align="center">
+  <img src="dragshift/assets/tesler.png" width="112" alt="Ícone do Tesler">
+</p>
 
-Fork privado de [llamaboi55/DragShift](https://github.com/llamaboi55/DragShift) com interface em português e ferramentas novas.
+<h1 align="center">Tesler</h1>
 
-**Para abrir:** dois cliques em `Iniciar DragShift.bat` (instala sozinho os componentes que faltarem).
+<p align="center">
+  <b>Arraste. Aperte Shift. Solte.</b><br>
+  Converta, comprima e edite qualquer arquivo no Windows sem abrir programa nenhum.
+</p>
 
-| Tipo | Novidades |
-| --- | --- |
-| PDF | **Recortar** trecho → PNG / copiar imagem / **copiar texto** · **Assinar** · **Organizar** páginas (reordenar, girar, apagar, extrair) e **Mesclar** na ordem · **OCR** (PDF escaneado vira pesquisável) · **Comprimir** para tamanho-alvo · tabelas → **Excel** · **Tirar senha** |
-| Imagens | **Sem fundo** (IA local) · **Texto** (OCR do Windows, copia o texto de prints) · **Juntar** (lado a lado / grade) |
-| Planilhas e dados | CSV ⇄ XLSX ⇄ Parquet ⇄ JSON (entende `;` e `1.234,56`) · CSV/XLSX → PDF · **Espiar** (colunas, tipos, vazios) · **Juntar** vários arquivos |
-| Vídeo / áudio | MP4, GIF, MP3, WAV, M4A · **Comprimir** vídeo |
-| Vários arquivos | **Renomear** em lote com padrão (`{nome}`, `{n}`, `{data}`), com desfazer |
-| Geral | Interface PT-BR (Configurações → Idioma) · botão **Copiar** nas notificações |
+<p align="center">
+  <img alt="Windows 10 e 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white">
+  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white">
+  <img alt="Qt 6" src="https://img.shields.io/badge/Qt-PySide6-41CD52?logo=qt&logoColor=white">
+  <img alt="Interface em português" src="https://img.shields.io/badge/interface-PT--BR-009C3B">
+  <img alt="Tudo local" src="https://img.shields.io/badge/arquivos-100%25%20locais-555">
+</p>
+
+<p align="center">
+  <img src="docs/img/hero.png" alt="Menu radial do Tesler aberto sobre um arquivo no Explorador, com notificações de erro, progresso e arquivo comprimido ao lado" width="100%">
+</p>
+
+O Tesler aparece embaixo do cursor no meio de um arrastar: comece a arrastar um arquivo, aperte **Shift** e solte numa fatia do menu. O resultado é salvo **ao lado do original** e o original nunca é alterado. Uma notificação mostra o que mudou (*102 KB → 61 KB · 40% menor*) com botões para **Abrir**, **Copiar**, **Mostrar na pasta** e **Desfazer**.
+
+Tudo roda no seu computador: nenhum arquivo é enviado para a internet, nem para remover fundo com IA.
+
+> [!NOTE]
+> O Tesler é uma versão estendida do **[DragShift](https://github.com/llamaboi55/DragShift)**, de **llamaboi55**. A ideia do menu radial, o motor de conversão e o visual de vidro líquido vêm de lá. Esta versão adiciona dezenas de ferramentas, uma interface nativa do Windows 11 e tradução completa para o português. Detalhes em [Créditos](#créditos).
 
 ---
 
-# DragShift
+## Sumário
 
-Convert and edit files on **Windows, Mac and Linux** with a liquid-glass radial menu. Start dragging any file, press **Shift**, and drop it on a slice.
+- [Como usar](#como-usar)
+- [Dois visuais](#dois-visuais)
+- [O que dá pra fazer](#o-que-dá-pra-fazer)
+- [Ferramentas novas em destaque](#ferramentas-novas-em-destaque)
+- [Instalação](#instalação)
+- [Configurações](#configurações)
+- [Créditos](#créditos)
+- [Licença](#licença)
+- [Para desenvolvedores](#para-desenvolvedores)
 
-![DragShift radial menu and Add BG editor](docs/preview.png)
+---
 
-## Download
+## Como usar
 
-From the [latest release](../../releases/latest):
+| | |
+|---|---|
+| **1. Arraste** | Comece a arrastar qualquer arquivo no Explorador ou na Área de Trabalho. |
+| **2. Aperte Shift** | O menu abre embaixo do cursor, com os formatos para **Converter**. |
+| **3. Shift de novo** | Troca para **Ferramentas** (comprimir, recortar, assinar, OCR…). |
+| **4. Solte** | Solte o arquivo na fatia. Pronto. |
 
-- **DragShift-Setup.exe** (recommended): installs for your user only, so no admin rights are needed. It adds a Start menu entry, an option to start with Windows, a right-click **DragShift…** entry and a **Send to → DragShift** entry. It uninstalls cleanly from Settings → Apps.
-- **DragShift.exe**: a portable version you can run from anywhere.
+Arrastou vários arquivos de uma vez? O Tesler oferece o que faz sentido para o grupo: juntar PDFs, montar uma colagem, juntar planilhas, renomear em lote.
 
-**Mac (easiest, no security warning):** paste this into Terminal:
+Também dá para usar sem arrastar: botão direito no arquivo → **Tesler…**, **Enviar para → Tesler**, ou dois cliques no ícone da bandeja para escolher um arquivo.
+
+---
+
+## Dois visuais
+
+Em **Configurações → Visual** você escolhe o que preferir:
+
+<p align="center">
+  <img src="docs/img/looks.png" alt="Menu radial nos três modos: Nativo escuro, Nativo claro e Vidro líquido clássico" width="100%">
+</p>
+
+| **Nativo (Windows 11)** | **Vidro líquido (clássico)** |
+|---|---|
+| Superfícies sóbrias, ícones de traço, cantos e sombras do próprio Windows. Segue o **tema claro/escuro** e a **cor de destaque** que você escolheu no Windows. | O visual original do DragShift: vidro que refrata o que está atrás, com borda de arco-íris. Sempre escuro. |
+
+<p align="center">
+  <img src="docs/img/compress.png" alt="Janela Comprimir imagem no visual nativo, tema escuro e tema claro" width="100%">
+</p>
+
+<details>
+<summary><b>Ver o visual clássico</b></summary>
+<br>
+<p align="center">
+  <img src="docs/img/classic.png" alt="Menu radial e janela Comprimir no visual de vidro líquido" width="100%">
+</p>
+</details>
+
+---
+
+## O que dá pra fazer
+
+Legenda: 🆕 = novo no Tesler · sem marca = herdado do DragShift (muitas vezes melhorado).
+
+### Imagens
+*JPG, PNG, WEBP, HEIC, AVIF, TIFF, BMP, GIF, ICO*
+
+| Ação | O que faz |
+|---|---|
+| **Converter** | Para qualquer um desses formatos ou PDF. Várias imagens viram um PDF só. |
+| **Comprimir** | Por qualidade ou até um tamanho-alvo ("abaixo de 500 KB"), com prévia antes/depois e estimativa ao vivo. |
+| **Redimensionar · Cortar · Ajustar** | Proporções prontas, rotação, luz e cor, preto e branco, segurar para comparar. |
+| **Anotar · Ocultar** | Setas, caixas, passos numerados, texto, marca-texto; tarjas para esconder dados. |
+| **Fundo** | Coloca a imagem sobre um fundo em gradiente. |
+| **Metadados** | Câmera, data e GPS (com link do mapa); apaga só a localização ou tudo. |
+| 🆕 **Sem fundo** | Remove o fundo com IA, **no seu computador** (modelo IS-Net). |
+| 🆕 **Copiar texto** | OCR do próprio Windows: arraste um print e o texto vai para a área de transferência em menos de 1 segundo. |
+| 🆕 **Juntar** | Várias imagens lado a lado, empilhadas ou em grade, com espaçamento e fundo. Salva ou copia. |
+
+### PDF
+
+| Ação | O que faz |
+|---|---|
+| **Converter** | Para JPG/PNG (uma por página), DOCX ou TXT. |
+| **Dividir · Girar · Mesclar · Proteger · Extrair imagens** | Um PDF por página, girar 90°, juntar vários, senha AES-256, salvar as imagens embutidas. |
+| 🆕 **Recortar trecho** | Selecione uma área da página e **salve como PNG**, **copie a imagem** ou **copie o texto** dela. |
+| 🆕 **Assinar** | Desenhe a assinatura ou importe de uma foto (o fundo é limpo sozinho), posicione e aplique numa página ou em todas. |
+| 🆕 **Organizar páginas** | Miniaturas para arrastar e reordenar, girar, apagar e extrair páginas selecionadas. Também define a ordem ao **mesclar**. |
+| 🆕 **OCR** | Transforma um PDF escaneado em PDF pesquisável, com texto selecionável. |
+| 🆕 **Comprimir** | Escolha um tamanho-alvo e o Tesler ajusta a qualidade das imagens até chegar lá. |
+| 🆕 **Tabelas → Excel** | Extrai as tabelas do PDF para XLSX, célula por célula. |
+| 🆕 **Tirar senha** | Remove a senha de um PDF que você já sabe abrir. |
+
+### Planilhas e dados 🆕
+*CSV, TSV, XLSX, Parquet, JSON, JSONL*
+
+| Ação | O que faz |
+|---|---|
+| **Converter** | CSV ⇄ XLSX ⇄ Parquet ⇄ JSON. Entende `;` como separador e números no formato brasileiro (`1.234,56`). |
+| **Para PDF** | CSV/XLSX viram uma tabela em PDF pronta para mandar. |
+| **Espiar** | Abre um raio-x do arquivo sem precisar do Excel: colunas, tipos, vazios, mínimos e máximos, primeiras linhas. |
+| **Juntar** | Vários arquivos viram um só, com as colunas casadas pelo nome. |
+
+### Vídeo e áudio 🆕
+*MP4, MOV, MKV, WEBM, MP3, WAV, M4A…*
+
+| Ação | O que faz |
+|---|---|
+| **Converter** | MP4, GIF, MP3, WAV, M4A, com barra de progresso na notificação. |
+| **Comprimir vídeo** | Reduz o tamanho mantendo a qualidade visível. |
+
+### Documentos
+
+| Ação | O que faz |
+|---|---|
+| **Word (.docx)** | Para PDF (usa o Word se estiver instalado) ou TXT. |
+| **Texto (.txt, .md…)** | Para PDF ou DOCX. |
+
+### Qualquer arquivo 🆕
+
+| Ação | O que faz |
+|---|---|
+| **Renomear em lote** | Padrões com `{nome}`, `{n}` e `{data}` (data da foto ou de modificação), prévia antes de aplicar e **desfazer** depois. |
+
+---
+
+## Ferramentas novas em destaque
+
+<p align="center">
+  <img src="docs/img/tools.png" alt="Seis janelas de ferramentas: Recortar trecho do PDF, Assinar PDF, Organizar páginas, Espiar dados, Renomear arquivos e Juntar imagens" width="100%">
+</p>
+
+<p align="center"><sub>Recortar trecho do PDF · Assinar · Organizar páginas · Espiar dados · Renomear em lote · Juntar imagens</sub></p>
+
+E nas notificações:
+
+- 🆕 **Copiar**: copia o arquivo gerado (ou o texto, no OCR) direto para colar no WhatsApp, e-mail ou Teams.
+- 🆕 **Barra de progresso** em tarefas longas, como vídeo e remoção de fundo.
+- **Desfazer** manda o arquivo novo para a Lixeira; no renomear em lote, volta os nomes originais.
+
+---
+
+## Instalação
+
+Por enquanto o Tesler roda a partir do código-fonte. Leva uns 5 minutos na primeira vez:
+
+1. Instale o **[Miniconda](https://docs.conda.io/en/latest/miniconda.html)** (Python 3.12).
+2. Baixe este repositório e, num terminal dentro da pasta, crie o ambiente:
+   ```bat
+   conda create -n dragshift python=3.12 -y
+   conda activate dragshift
+   pip install -r requirements.txt
+   ```
+3. Dê dois cliques em **`Iniciar Tesler.bat`**.
+
+O `.bat` confere e instala sozinho os componentes que faltarem sempre que o projeto for atualizado. Depois de aberto, o Tesler fica na bandeja do sistema, ao lado do relógio.
+
+> [!TIP]
+> Em **Configurações**, marque **Iniciar o Tesler com o Windows** para não precisar abrir toda vez.
+
+> [!NOTE]
+> Na primeira vez que usar **Sem fundo**, o Tesler baixa o modelo de IA (cerca de 170 MB) para `%LOCALAPPDATA%\Tesler\models`. Depois disso funciona offline.
+
+---
+
+## Configurações
+
+Clique com o botão direito no ícone da bandeja → **Configurações**:
+
+| Opção | Escolhas |
+|---|---|
+| **Idioma** | Automático, Português, English |
+| **Visual** | Nativo (Windows 11) · Vidro líquido (clássico) |
+| **Tema** | Automático (segue o Windows) · Escuro · Claro |
+| **Tecla do menu** | Shift, Ctrl ou Alt |
+| **Onde salvar** | Ao lado do original ou numa subpasta `Tesler` |
+| **Qualidade** | JPG/WebP e resolução de PDF → imagem |
+| **Iniciar com o Windows** | Liga ou desliga |
+
+Idioma e visual valem depois de reiniciar o app.
+
+> [!NOTE]
+> Quem usava o DragShift não perde nada: na primeira vez que o Tesler abre, ele traz as configurações, as assinaturas salvas, o modelo de IA e a inicialização com o Windows.
+
+---
+
+## Créditos
+
+O Tesler existe graças ao **[DragShift](https://github.com/llamaboi55/DragShift)**, criado por **llamaboi55** e publicado sob a licença MIT. Do projeto original vêm:
+
+- a ideia de **Shift + arrastar** para abrir um menu radial em qualquer lugar do sistema;
+- o motor de conversão de imagens, PDF, Word e texto;
+- as ferramentas de comprimir, redimensionar, cortar, ajustar, anotar, ocultar, fundo, metadados, dividir, girar, mesclar, proteger e extrair imagens;
+- o visual de **vidro líquido**, que segue disponível como opção;
+- o instalador, a integração com o menu de contexto e "Enviar para", e os testes de ponta a ponta.
+
+Se o DragShift te ajudou, considere [apoiar o autor original](https://github.com/llamaboi55/DragShift#support).
+
+O nome é uma homenagem a **[Larry Tesler](https://pt.wikipedia.org/wiki/Larry_Tesler)** (1945–2020), cientista da computação que criou o **recortar, copiar e colar**. O ícone brinca com isso: a barra do **T** é uma fatia do menu radial, "recortada" e levantada.
+
+Outros projetos que tornam o Tesler possível: [Qt / PySide6](https://www.qt.io/qt-for-python), [PyMuPDF](https://pymupdf.readthedocs.io), [Pillow](https://python-pillow.org), [ONNX Runtime](https://onnxruntime.ai), [IS-Net / DIS](https://github.com/xuebinqin/DIS), [FFmpeg](https://ffmpeg.org), [openpyxl](https://openpyxl.readthedocs.io), [Apache Arrow](https://arrow.apache.org) e os ícones [Lucide](https://lucide.dev).
+
+---
+
+## Licença
+
+O código do Tesler segue a licença **[MIT](LICENSE)** do projeto original: livre para usar, modificar e compartilhar, mantendo o aviso de copyright.
+
+Algumas dependências têm licenças próprias, que valem quando você distribui o app empacotado: **PyMuPDF** (AGPL-3.0), **FFmpeg** (GPL), **PySide6** (LGPL-3.0) e o modelo **IS-Net** (Apache-2.0). Como o Tesler é open source, isso é compatível; só mantenha o código-fonte disponível ao distribuir.
+
+---
+
+## Para desenvolvedores
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/llamaboi55/DragShift/main/install-mac.sh | bash
+conda activate dragshift
+python -m dragshift            # abre o app
+python -m dragshift --selftest # testa todas as conversões e janelas
+python -m pytest -q            # testes (rodam nos dois visuais)
 ```
 
-It picks the right build for your Mac, installs it to Applications and opens it ([see what it does](install-mac.sh)). Run the same line again to update.
+- O código fica em `dragshift/` (o nome interno do pacote foi mantido para não quebrar instalações existentes).
+- O visual é controlado por `theme.py` (cores, tema, cor de destaque do Windows) e `glass.py` (folha de estilo e o vidro clássico). Os ícones de traço estão em `icons.py`.
+- Os logs ficam em `%LOCALAPPDATA%\Tesler\log.txt`.
+- O código herdado ainda traz suporte a **Mac** e **Linux**, mas as ferramentas novas foram feitas e testadas só no **Windows** (o OCR, por exemplo, usa o motor do próprio Windows).
 
-Or download the .dmg yourself:
-- **DragShift-mac-apple-silicon.dmg**: for Macs with M1, M2, M3 or M4 chips (macOS 11 or later).
-- **DragShift-mac-intel.dmg**: for Intel Macs.
-
-Open the .dmg and drag **DragShift** into Applications. DragShift lives in the menu bar and has no Dock icon. You can also right-click any file → **Open With → DragShift**.
-
-**Linux (Debian, Ubuntu, Mint, MX… with XFCE, MATE, Cinnamon or any X11 desktop):** download **DragShift-linux-amd64.deb**, then run:
-
-```bash
-sudo apt install ./DragShift-linux-amd64.deb
-```
-
-Open **DragShift** from the app menu. It sits in the panel's notification area, and you can turn on *Start at login* in Settings. It works in Thunar, Nautilus, Nemo, Caja, Dolphin and on the desktop, and it also adds **Open With → DragShift** to file right-click menus. It works with or without a compositor: when compositing is off (common on XFCE), the menu and windows are cut to their exact shape, so you won't see black boxes. Builds target Debian 12 or newer (Ubuntu 23.04+).
-
-> **Wayland:** Wayland doesn't let apps read the global Shift and mouse state, so the Shift + drag trigger only works in X11 sessions (XFCE is X11). On GNOME/KDE Wayland, use right-click → **Open With → DragShift**, or pick *"Ubuntu on Xorg"* / *"Plasma (X11)"* at the login screen.
-
-> **First launch on Windows:** SmartScreen may warn because the app isn't code-signed yet. Click **More info → Run anyway**.
->
-> **First launch on Mac, if you used the .dmg instead of the Terminal line:** macOS says *"Apple could not verify 'DragShift' is free of malware."* This happens with any app that hasn't paid for Apple's notarization; DragShift's code is all public in this repo. To open it:
-> 1. Open DragShift once and click **Done** on the warning.
-> 2. Go to  → **System Settings → Privacy & Security**, scroll down to *"DragShift was blocked…"* and click **Open Anyway**. Enter your password and confirm.
-> 3. That's it. macOS remembers the choice.
->
-> Or, in Terminal: `xattr -dr com.apple.quarantine /Applications/DragShift.app`
-> (On macOS 15 and later, the old right-click → Open shortcut no longer skips this warning.)
->
-> **Mac, optional:** allow **Screen Recording** when DragShift asks, so the glass can refract the windows behind it. Without it, the glass shows your wallpaper. Nothing is ever saved or sent.
-
-## How to use
-
-1. Start dragging a file (an image, PDF, Word or text file; desktop shortcuts to one work too) in File Explorer, Finder, your Linux file manager or on the desktop.
-2. Press **Shift**. The menu opens under your cursor.
-3. Drop the file on a slice. The result is saved **next to the original**, and the original is never changed.
-4. To switch between **Convert** and **Tools**, tap **Shift** again.
-
-Each action ends with a notification that shows what changed, for example *"2.4 MB → 610 KB · 75% smaller"* or *"2400×1600 → 1200×800"*, with **Open**, **Show in folder** and **Undo**. Undo moves the new file to the Recycle Bin (Trash on Mac and Linux).
-
-You can also right-click a file → **DragShift…**, use **Send to → DragShift**, or double-click the tray icon to pick a file.
-
-## What it does
-
-| File | Convert to | Tools |
-|---|---|---|
-| Images (JPG, PNG, WEBP, HEIC, AVIF, TIFF, BMP, GIF, ICO) | Any of those, or PDF. Several images become one combined PDF | **Compress** (by quality or to a target size such as "under 500 KB", with a before/after preview, several files at once) · **Resize** · **Crop** (ratios, live pixel size, rotate) · **Edit** (Auto, light/colour, rotate, flip, B&W, hold to compare) · **Annotate** (arrows, boxes, numbered steps, text, marker) · **Redact** · **Add BG** · **Metadata** (camera, date, GPS location with a map link; remove location only or remove everything) |
-| PDF | JPG or PNG (one per page), DOCX, TXT | Compress · Split · Rotate · Merge (drop several) · **Protect** (AES-256 password) · **Extract images** · Metadata |
-| Word (.docx) | PDF (uses Microsoft Word if it's installed, otherwise a built-in renderer), TXT | — |
-| Text (.txt, .md, .csv…) | PDF, DOCX | — |
-
-**Settings** (tray menu): trigger key (Shift, Ctrl or Alt), where results go (next to the original or a `DragShift` subfolder), JPG/WebP quality, PDF → image resolution, and start at login.
-
-## The look
-
-The menu, notifications and windows use real **liquid-glass** rendering. DragShift captures the screen behind each surface and refracts it through the shape. A curved edge bends light, R, G and B bend by slightly different amounts (which gives the rainbow fringe), a highlight runs along the rim facing the light, and the tint adapts to what's behind it so text stays readable. The menu renders on a background thread while it pops in, so it still opens instantly.
-
-## Tested on real desktops
-
-Every push runs these jobs on GitHub's Windows, Mac and Linux machines:
-
-- **Build:** unit tests, the portable exe and installer builds, a self-test of each build, and a silent install → run → uninstall check.
-- **End-to-end:** a script moves the real mouse to drag files from File Explorer *and* the Desktop, presses Shift, drops on every conversion and tool, drives each tool window, and checks every output file (format, dimensions, page counts, encryption, metadata removed). The results table and a screen recording are saved to the `e2e-output` branch.
-- **Mac end-to-end:** real Finder drags with Shift (Quartz mouse and keyboard events) through conversions, PDF tools, merging and the tool windows. Every output is checked, and the run is recorded to the `e2e-mac-output` branch.
-- **Mac builds:** `DragShift.app` and the .dmg for Apple Silicon and Intel, each self-tested inside the app bundle.
-- **Debian/XFCE:** builds the .deb on Debian 12, installs it, and runs the same kind of end-to-end test in Thunar under XFCE's window manager with the compositor **off**. Real XTest drags with Shift go through conversions, PDF tools, merging, the tool windows and Open With. The results and a recording are saved to the `e2e-linux-output` branch.
-- **Demo video:** pushing to the `demo` branch records a showcase video.
-
-## Support
-
-DragShift is free. If it saves you time, you can leave a tip on Cash App: [**$AtikaKadesha**](https://cash.app/$AtikaKadesha). Thank you!
-
-<img src="docs/tip-cashapp.png" alt="Cash App QR code for $AtikaKadesha" width="220">
-
-## License
-
-[MIT](LICENSE): free to use, modify and share.
-
-## Run from source
-
-```bash
-pip install -r requirements.txt
-python -m dragshift
-```
-
-On Linux, PySide6 also needs the Qt XCB libraries: `sudo apt install libxcb-cursor0 libxkbcommon-x11-0`.
-
-Tests: `python -m pytest -q`. Logs are written to `%LOCALAPPDATA%\DragShift\log.txt` on Windows, `~/Library/Logs/DragShift/log.txt` on Mac and `~/.local/share/DragShift/log.txt` on Linux.
-
-Windows builds will be code-signed by the SignPath Foundation, which provides free code signing for open-source projects.
+<p align="center"><sub>Feito no Brasil 🇧🇷 a partir do DragShift.</sub></p>

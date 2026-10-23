@@ -423,7 +423,7 @@ class ToastCard(QWidget):
 
     def _where(self) -> str:
         from .util import CONFIG
-        return tr("Saved in a “DragShift” subfolder") if CONFIG.get("output") == "folder" else tr("Saved next to the original")
+        return tr("Saved in a “Tesler” subfolder") if CONFIG.get("output") == "folder" else tr("Saved next to the original")
 
 
     # ------------------------------------------------------------ classic paint

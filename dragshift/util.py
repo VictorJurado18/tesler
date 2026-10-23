@@ -63,13 +63,37 @@ def unique_path(path: str | Path) -> Path:
         i += 1
 
 
+APP_NAME = "Tesler"
+OLD_NAME = "DragShift"   # the project this app is based on; its data folder is moved over once
+
+
+def app_data_dir() -> Path:
+    """%LOCALAPPDATA%\\Tesler (or ~/.local/share/Tesler). Moves the old Tesler folder the first time."""
+    root = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share")
+    d = root / APP_NAME
+    old = root / OLD_NAME
+    if not d.exists() and old.is_dir():
+        try:
+            old.rename(d)
+        except OSError:   # something still has a file open there: copy what matters instead
+            import shutil
+            for sub in ("models", "signatures"):
+                try:
+                    if (old / sub).is_dir():
+                        shutil.copytree(old / sub, d / sub, dirs_exist_ok=True)
+                except OSError:
+                    pass
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
 class UserError(Exception):
     """An error with a message that's fine to show the user as-is."""
 
 
 # Runtime options (filled from Settings at start-up; plain values so worker threads can read them)
 CONFIG = {
-    "output": "next",        # "next" = beside the original, "folder" = a "DragShift" subfolder
+    "output": "next",        # "next" = beside the original, "folder" = a "Tesler" subfolder
     "jpg_quality": 90,
     "pdf_dpi": 200,
 }
@@ -78,7 +102,7 @@ CONFIG = {
 def output_dir(src: str | Path) -> Path:
     d = Path(src).parent
     if CONFIG.get("output") == "folder":
-        d = d / "DragShift"
+        d = d / APP_NAME
         d.mkdir(exist_ok=True)
     return d
 

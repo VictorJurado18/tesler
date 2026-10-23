@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=DragShift
+Name=Tesler
 GenericName=File converter
 Comment=Convert and edit files: start dragging a file and press Shift
 Exec=dragshift %F

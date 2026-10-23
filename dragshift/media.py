@@ -29,8 +29,8 @@ def ffmpeg_exe() -> str:
         import imageio_ffmpeg
         return imageio_ffmpeg.get_ffmpeg_exe()
     except Exception as e:  # noqa: BLE001
-        raise UserError("The video component isn't installed yet. Open DragShift with "
-                        "“Iniciar DragShift.bat” once to install it.") from e
+        raise UserError("The video component isn't installed yet. Open Tesler with "
+                        "“Iniciar Tesler.bat” once to install it.") from e
 
 
 def probe(src: str | Path) -> dict:
@@ -51,7 +51,7 @@ def probe(src: str | Path) -> dict:
         elif "Stream #" in line and "Audio:" in line:
             info["audio"] = True
     if not (info["video"] or info["audio"]):
-        raise UserError("This file doesn't look like a video or audio DragShift can read.")
+        raise UserError("This file doesn't look like a video or audio Tesler can read.")
     return info
 
 

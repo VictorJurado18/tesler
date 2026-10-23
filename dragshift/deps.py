@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import hashlib
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -14,8 +13,8 @@ REQ = ROOT / "requirements.txt"
 
 
 def marker() -> Path:
-    base = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "DragShift"
-    base.mkdir(parents=True, exist_ok=True)
+    from .util import app_data_dir
+    base = app_data_dir()
     return base / "requirements.sha256"
 
 
@@ -26,7 +25,7 @@ def main() -> int:
     m = marker()
     if m.exists() and m.read_text().strip() == digest:
         return 0
-    print("DragShift: instalando/atualizando componentes (so desta vez)...", flush=True)
+    print("Tesler: instalando/atualizando componentes (so desta vez)...", flush=True)
     r = subprocess.run([sys.executable, "-m", "pip", "install", "-q", "--disable-pip-version-check",
                         "-r", str(REQ)])
     if r.returncode != 0:

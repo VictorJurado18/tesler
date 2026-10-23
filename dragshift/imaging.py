@@ -9,7 +9,7 @@ from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter, ImageOp
 from PIL.ExifTags import GPSTAGS, TAGS
 
 from .convert import atomic_save, fitz, flatten, open_image, open_pdf, save_image
-from .util import UserError, sibling
+from .util import UserError, app_data_dir, sibling
 from .i18n import tr
 
 EXT_TARGET = {".jpg": "JPG", ".jpeg": "JPG", ".png": "PNG", ".webp": "WEBP", ".tif": "TIFF",
@@ -736,8 +736,7 @@ def build_pdf(srcs: list[str | Path], refs: list[PageRef], label: str) -> Path:
 
 # ---------------------------------------------------------------- signatures
 def signatures_dir() -> Path:
-    import os
-    base = Path(os.environ.get("LOCALAPPDATA") or Path.home() / ".local" / "share") / "DragShift" / "signatures"
+    base = app_data_dir() / "signatures"
     base.mkdir(parents=True, exist_ok=True)
     return base
 

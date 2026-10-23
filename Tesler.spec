@@ -31,26 +31,26 @@ a.datas = [d for d in a.datas if "translations" not in d[0].replace("\\", "/")]
 pyz = PYZ(a.pure)
 import sys
 IS_MAC = sys.platform == "darwin"
-common = dict(name="DragShift", console=False, upx=False)
+common = dict(name="Tesler", console=False, upx=False)
 IS_LINUX = sys.platform.startswith("linux")
 if IS_MAC:
-    common.update(icon="dragshift/assets/dragshift.icns")
+    common.update(icon="dragshift/assets/tesler.icns")
 elif IS_LINUX:
     common.update(name="dragshift")       # icon comes from the .desktop file / hicolor theme
 else:
-    common.update(icon="dragshift/assets/dragshift.ico", version="installer/version_info.txt")
+    common.update(icon="dragshift/assets/tesler.ico", version="installer/version_info.txt")
 
 if IS_MAC:
     exe = EXE(pyz, a.scripts, [], exclude_binaries=True, argv_emulation=False, **common)
-    coll = COLLECT(exe, a.binaries, a.datas, name="DragShift", upx=False)
+    coll = COLLECT(exe, a.binaries, a.datas, name="Tesler", upx=False)
     app = BUNDLE(
         coll,
-        name="DragShift.app",
-        icon="dragshift/assets/dragshift.icns",
+        name="Tesler.app",
+        icon="dragshift/assets/tesler.icns",
         bundle_identifier="com.dragshift.app",
         info_plist={
-            "CFBundleName": "DragShift",
-            "CFBundleDisplayName": "DragShift",
+            "CFBundleName": "Tesler",
+            "CFBundleDisplayName": "Tesler",
             "CFBundleShortVersionString": "1.1.0",
             "CFBundleVersion": "1.1.0",
             "LSUIElement": True,                 # menu-bar app, no Dock icon
@@ -73,4 +73,4 @@ elif onefile:
     exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], **common)
 else:
     exe = EXE(pyz, a.scripts, [], exclude_binaries=True, **common)
-    coll = COLLECT(exe, a.binaries, a.datas, name="DragShift", upx=False)
+    coll = COLLECT(exe, a.binaries, a.datas, name="Tesler", upx=False)

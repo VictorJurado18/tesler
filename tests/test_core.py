@@ -104,8 +104,10 @@ def test_paths(tmp_path):
 
 @pytest.mark.skipif(__import__("sys").platform != "win32", reason="Windows shortcuts")
 def test_shortcut_resolves_to_target(img, tmp_path):
+    import pythoncom
     import win32com.client
     from dragshift.util import resolve_shortcuts
+    pythoncom.CoInitialize()
     lnk = tmp_path / "pic.lnk"
     sc = win32com.client.Dispatch("WScript.Shell").CreateShortcut(str(lnk))
     sc.TargetPath = str(img)

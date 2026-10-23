@@ -40,7 +40,9 @@ def resolve_shortcuts(paths: list[str]) -> list[str]:
     for p in paths:
         if str(p).lower().endswith(".lnk"):
             try:
+                import pythoncom  # type: ignore
                 import win32com.client  # type: ignore
+                pythoncom.CoInitialize()   # any thread may resolve; harmless if already initialised
                 target = win32com.client.Dispatch("WScript.Shell").CreateShortcut(str(p)).TargetPath
                 if target and os.path.isfile(target):
                     p = target

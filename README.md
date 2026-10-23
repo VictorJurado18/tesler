@@ -28,6 +28,9 @@ Tudo roda no seu computador: nenhum arquivo é enviado para a internet, nem para
 > [!NOTE]
 > O Tesler é uma versão estendida do **[DragShift](https://github.com/llamaboi55/DragShift)**, de **llamaboi55**. A ideia do menu radial, o motor de conversão e o visual de vidro líquido vêm de lá. Esta versão adiciona dezenas de ferramentas, uma interface nativa do Windows 11 e tradução completa para o português. Detalhes em [Créditos](#créditos).
 
+> [!IMPORTANT]
+> **O Tesler é feito para Windows 10 e 11.** Ele não foi testado no Mac nem no Linux, e o instalador e as atualizações existem só para Windows. Veja [Compatibilidade](#compatibilidade).
+
 ---
 
 ## Sumário
@@ -38,6 +41,7 @@ Tudo roda no seu computador: nenhum arquivo é enviado para a internet, nem para
 - [Ferramentas novas em destaque](#ferramentas-novas-em-destaque)
 - [Instalação](#instalação)
 - [Configurações](#configurações)
+- [Compatibilidade](#compatibilidade)
 - [Curtiu o Tesler?](#curtiu-o-tesler)
 - [Créditos](#créditos)
 - [Licença](#licença)
@@ -217,6 +221,21 @@ Idioma e visual valem depois de reiniciar o app.
 
 ---
 
+## Compatibilidade
+
+| Sistema | Situação |
+|---|---|
+| **Windows 11** | ✅ Suportado. É onde o Tesler é desenvolvido e usado no dia a dia. Antes de cada versão ser publicada, o GitHub roda os testes, instala e testa o app numa máquina Windows. |
+| **Windows 10** | ✅ Suportado, mas menos testado no uso real. O visual nativo perde só os cantos arredondados, que são do Windows 11. |
+| **macOS** | ⚠️ Não suportado. O código herdado do DragShift ainda tem partes para Mac, mas **nada do Tesler foi testado nele** e não há instalador. |
+| **Linux** | ⚠️ Não suportado. Mesma situação do macOS. |
+
+Se alguém rodar o código-fonte no Mac ou no Linux por conta própria, algumas ferramentas certamente não funcionam porque usam recursos do Windows: **Copiar texto** de imagens e **OCR** de PDF (usam o reconhecimento de texto do Windows), **planilha → PDF** com o layout do Excel e a **atualização automática**. As demais podem funcionar, mas sem garantia.
+
+Quer usar no Mac ou no Linux? Abra uma [issue](https://github.com/VictorJurado18/tesler/issues) contando seu caso.
+
+---
+
 ## Curtiu o Tesler?
 
 Se ele te poupou um tempinho, um cafezinho ajuda a manter o projeto vivo. Mas fica tranquilo: usar o app continua 100% livre. ☕
@@ -290,6 +309,6 @@ O workflow [`build.yml`](.github/workflows/build.yml) roda os testes, gera o app
 - O visual é controlado por `theme.py` (cores, tema, cor de destaque do Windows) e `glass.py` (folha de estilo e o vidro clássico). Os ícones de traço estão em `icons.py`.
 - As atualizações ficam em `updater.py` (GitHub Releases, download conferido por SHA-256) e `updatewin.py` (janelas).
 - Os logs ficam em `%LOCALAPPDATA%\Tesler\log.txt`.
-- O código herdado ainda traz suporte a **Mac** e **Linux**, mas as ferramentas novas foram feitas e testadas só no **Windows** (o OCR, por exemplo, usa o motor do próprio Windows).
+- O Tesler é só para Windows (veja [Compatibilidade](#compatibilidade)). O código herdado para Mac e Linux (`platform_mac.py`, `platform_linux.py`, `packaging/`) ficou no repositório, mas não é mantido nem testado.
 
 <p align="center"><sub>Feito no Brasil 🇧🇷 a partir do DragShift.</sub></p>

@@ -591,6 +591,7 @@ PT: dict[str, str] = {
     "Tesler is based on {link}: you can thank its original author too.":
         "O Tesler é baseado no {link}: dá para agradecer o autor original também.",
     "Copy Pix key": "Copiar chave Pix",
+    "first {s} s only": "só os primeiros {s} s",
     "Look": "Visual", "Native (Windows 11)": "Nativo (Windows 11)", "Liquid glass (classic)": "Vidro líquido (clássico)",
     "Theme": "Tema", "Same as Windows": "Igual ao Windows", "Dark": "Escuro", "Light": "Claro",
     "Arrow": "Seta", "Box": "Caixa", "Circle": "Círculo", "Pen": "Caneta", "Marker": "Marca-texto",

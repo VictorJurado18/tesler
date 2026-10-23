@@ -101,6 +101,13 @@ def summarize(action: str, srcs: list, outs: list, extra: str = "") -> Result:
             if n:
                 bits.append(plural(n, "{n} page", "{n} pages"))
         bits.append(human_size(after))
+        if fmt == "GIF" and category(src) == "video":
+            try:
+                from .media import GIF_MAX_SECONDS, probe
+                if (probe(src).get("duration") or 0) > GIF_MAX_SECONDS + 0.5:
+                    bits.append(tr("first {s} s only", s=GIF_MAX_SECONDS))
+            except Exception:
+                pass
         return Result(title, " · ".join(bits), outs, srcs)
 
     if name == "Compress":

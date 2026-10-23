@@ -17,7 +17,7 @@ VIDEO_EXTS = {".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v", ".wmv", ".mpg", "
 AUDIO_EXTS = {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".oga", ".opus", ".flac", ".wma"}
 VIDEO_TARGETS = ["MP4", "GIF", "MP3"]
 AUDIO_TARGETS = ["MP3", "WAV", "M4A"]
-GIF_MAX_SECONDS = 20
+GIF_MAX_SECONDS = 60   # longer videos: the GIF keeps the start, and the notification says so
 GIF_WIDTH = 640
 
 Progress = Callable[[float], None] | None
@@ -93,7 +93,7 @@ def to_mp4(src, progress: Progress = None) -> list[Path]:
 
 
 def to_gif(src, progress: Progress = None) -> list[Path]:
-    """Good-looking GIF: per-file palette, 12 fps, 640 px wide, first 20 s at most."""
+    """Good-looking GIF: per-file palette, 12 fps, 640 px wide, first GIF_MAX_SECONDS at most."""
     info = probe(src)
     if not info["video"]:
         raise UserError("This file has no video.")

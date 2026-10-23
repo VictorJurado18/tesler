@@ -216,8 +216,36 @@ def pdf_to_docx(src: str | Path) -> list[Path]:
 
 
 # ---------------------------------------------------------------- DOCX
-def _docx_paragraph_html(p) -> str:
-    parts = []
+_BLIP = "{http://schemas.openxmlformats.org/drawingml/2006/main}blip"
+_EMBED = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed"
+_EXTENT = "{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}extent"
+
+
+def _docx_images_html(p, images: dict | None) -> str:
+    """Pictures in a paragraph → <img> tags; their bytes go to `images` (name → bytes) for the PDF."""
+    if images is None:
+        return ""
+    tags = []
+    for drawing in p._p.iter("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}drawing"):
+        blip = next(drawing.iter(_BLIP), None)
+        rid = blip.get(_EMBED) if blip is not None else None
+        part = p.part.related_parts.get(rid) if rid else None
+        if part is None:
+            continue
+        ext = (Path(part.partname).suffix or ".png").lower()
+        name = f"img{len(images) + 1}{ext}"
+        images[name] = part.blob
+        extent = next(drawing.iter(_EXTENT), None)
+        width = ""
+        if extent is not None and extent.get("cx"):
+            width = f' style="width: {min(int(extent.get("cx")) / 12700, 504):.0f}pt"'   # EMU → pt, ≤ text width
+        tags.append(f'<img src="{name}"{width}>')
+    return "".join(tags)
+
+
+def _docx_paragraph_html(p, images: dict | None = None) -> str:
+    pics = _docx_images_html(p, images)
+    parts = [pics] if pics else []
     for r in p.runs:
         t = html.escape(r.text)
         if not t:
@@ -231,6 +259,14 @@ def _docx_paragraph_html(p) -> str:
         parts.append(t)
     body = "".join(parts) or "&nbsp;"
     style = (p.style.name or "").lower() if p.style is not None else ""
+    try:
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        if p.alignment == WD_ALIGN_PARAGRAPH.CENTER:
+            return f'<p style="text-align: center">{body}</p>'
+        if p.alignment == WD_ALIGN_PARAGRAPH.RIGHT:
+            return f'<p style="text-align: right">{body}</p>'
+    except Exception:
+        pass
     if style.startswith("heading"):
         lvl = "".join(c for c in style if c.isdigit()) or "1"
         lvl = str(min(int(lvl), 6))
@@ -242,7 +278,8 @@ def _docx_paragraph_html(p) -> str:
     return f"<p>{body}</p>"
 
 
-def docx_to_html(src: str | Path) -> str:
+def docx_to_html(src: str | Path, images: dict | None = None) -> str:
+    """Body HTML for the built-in renderer. Pass a dict to also collect the pictures."""
     from docx import Document
     from docx.table import Table
     from docx.text.paragraph import Paragraph
@@ -252,7 +289,7 @@ def docx_to_html(src: str | Path) -> str:
     for child in d.element.body.iterchildren():
         tag = child.tag.rsplit("}", 1)[-1]
         if tag == "p":
-            out.append(_docx_paragraph_html(Paragraph(child, d)))
+            out.append(_docx_paragraph_html(Paragraph(child, d), images))
         elif tag == "tbl":
             t = Table(child, d)
             rows = []
@@ -318,13 +355,18 @@ body { font-size: 11pt; line-height: 1.35; }
 h1 { font-size: 20pt; } h2 { font-size: 16pt; } h3 { font-size: 13pt; }
 p { margin: 0 0 6pt 0; }
 pre { font-family: monospace; font-size: 9.5pt; white-space: pre-wrap; }
-table { border-collapse: collapse; margin: 6pt 0; }
+table { border-collapse: collapse; margin: 6pt 0; width: 100%; }
 td { border: 1px solid #888; padding: 3pt 5pt; font-size: 10pt; }
 """
 
 
-def html_to_pdf(body_html: str, out: Path) -> None:
-    story = fitz.Story(html=body_html, user_css=CSS)
+def html_to_pdf(body_html: str, out: Path, images: dict | None = None) -> None:
+    archive = None
+    if images:
+        archive = fitz.Archive()
+        for name, data in images.items():
+            archive.add(data, name)
+    story = fitz.Story(html=body_html, user_css=CSS, archive=archive)
     writer = fitz.DocumentWriter(str(out))
     mediabox = fitz.paper_rect("letter")
     where = mediabox + (54, 54, -54, -54)
@@ -341,7 +383,8 @@ def docx_to_pdf(src: str | Path) -> list[Path]:
     src = Path(src)
     out = sibling(src, ext=".pdf")
     if not _word_to_pdf(src, out):
-        html_to_pdf(docx_to_html(src), out)
+        images: dict = {}
+        html_to_pdf(docx_to_html(src, images), out, images)
     return [out]
 
 

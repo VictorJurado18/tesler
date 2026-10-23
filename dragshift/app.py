@@ -192,7 +192,8 @@ class DragShiftApp(QObject):
         m.addSeparator()
         m.addAction(tr("Settings…"), self.open_settings)
         m.addAction(tr("How to use"), self.show_welcome)
-        m.addAction(tr("Check for updates…"), self.open_updates)
+        self.act_update = m.addAction(tr("Check for updates…"))
+        self.act_update.triggered.connect(lambda: self.open_updates())
         m.addAction(tr("Support Tesler ♥"), self.show_support)
         m.addSeparator()
         m.addAction(tr("Quit {app}", app=APP_NAME), self.qapp.quit)
@@ -559,12 +560,18 @@ class DragShiftApp(QObject):
             self.settings.q.setValue("last_version", VERSION)
             if last and not show_welcome and updater.is_newer(VERSION, last) and updater.notes_for(VERSION):
                 QTimer.singleShot(900, self.show_whats_new)
+        # check soon after start, then keep checking while Tesler sits in the tray for days
+        QTimer.singleShot(20000, self._maybe_check)
+        self._update_timer = QTimer(self, interval=3600 * 1000, timeout=self._maybe_check)
+        self._update_timer.start()
+
+    def _maybe_check(self):
+        from . import updater
         if not self.settings.get("auto_update"):
             return
-        now = int(time.time())
-        if now - self.settings.get("last_check") < updater.CHECK_EVERY:
+        if int(time.time()) - self.settings.get("last_check") < updater.CHECK_EVERY:
             return
-        QTimer.singleShot(20000, self._auto_check)
+        self._auto_check()
 
     def _auto_check(self):
         import threading
@@ -584,6 +591,13 @@ class DragShiftApp(QObject):
         self._update_sig = sig
 
     def _offer_update(self, rel):
+        # the tray menu keeps the offer after the notification is gone
+        self.act_update.setText(tr("Update to Tesler {v}…", v=rel.version))
+        self.act_update.triggered.disconnect()
+        self.act_update.triggered.connect(lambda: self.open_updates(rel))
+        if getattr(self, "_offered", None) == rel.version:
+            return
+        self._offered = rel.version
         card = self.toasts.info(tr("Tesler {v} is available", v=rel.version),
                                 tr("Click to see what's new and update."), 15000)
         card.on_click = lambda: self.open_updates(rel)

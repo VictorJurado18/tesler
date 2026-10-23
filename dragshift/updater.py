@@ -23,7 +23,7 @@ REPO = "VictorJurado18/tesler"
 API_LATEST = f"https://api.github.com/repos/{REPO}/releases/latest"
 RELEASES_PAGE = f"https://github.com/{REPO}/releases"
 SETUP_NAME = "Tesler-Setup.exe"
-CHECK_EVERY = 20 * 3600        # automatic check at most this often (seconds)
+CHECK_EVERY = 6 * 3600         # automatic check at most this often (seconds), at start and while running
 UA = {"User-Agent": f"Tesler/{__version__}", "Accept": "application/vnd.github+json"}
 
 

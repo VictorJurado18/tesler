@@ -125,3 +125,16 @@ def test_data_folder_moves_from_dragshift(tmp_path, monkeypatch):
     d = app_data_dir()
     assert d.name == "Tesler" and (d / "models" / "m.onnx").exists()
     assert not (tmp_path / "DragShift").exists()
+
+
+def test_json_object_with_nested_list_keeps_its_fields(tmp_path):
+    import json
+    from dragshift import data
+    p = tmp_path / "pessoa.json"
+    p.write_text(json.dumps({"nome": "Ana", "cpf": "0123", "enderecos": [{"cep": "01001000"}, {"cep": "02002000"}]}))
+    rows = data.load_table(p).to_pylist()
+    assert rows == [{"nome": "Ana", "cpf": "0123", "enderecos.cep": "01001000"},
+                    {"nome": "Ana", "cpf": "0123", "enderecos.cep": "02002000"}]
+    env = tmp_path / "api.json"
+    env.write_text(json.dumps({"data": [{"a": 1}, {"a": 2}], "total": 2}))
+    assert data.load_table(env).to_pylist() == [{"a": 1}, {"a": 2}]

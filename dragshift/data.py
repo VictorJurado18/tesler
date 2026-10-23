@@ -114,6 +114,9 @@ def _flatten(rec, prefix: str = "", out: dict | None = None) -> dict:
     return out
 
 
+WRAPPER_KEYS = {"data", "items", "results", "result", "records", "rows", "value", "values", "content", "list", "dados", "itens", "registros", "resultados"}
+
+
 def _json_records(src: Path) -> list:
     text = src.read_text(encoding="utf-8-sig")
     stripped = text.lstrip()
@@ -128,11 +131,19 @@ def _json_records(src: Path) -> list:
         raise UserError(f"Invalid JSON (line {e.lineno}).") from e
     if isinstance(data, list):
         return data
-    if isinstance(data, dict):           # {"data": [...]} / {"items": [...]}: use the biggest list of records
-        lists = [v for v in data.values() if isinstance(v, list) and v and isinstance(v[0], dict)]
-        if lists:
-            return max(lists, key=len)
-        return [data]
+    if isinstance(data, dict):
+        lists = {k: v for k, v in data.items() if isinstance(v, list) and v and isinstance(v[0], dict)}
+        if not lists:
+            return [data]
+        key = max(lists, key=lambda k: len(lists[k]))
+        others = {k: v for k, v in data.items() if k != key}
+        # {"data": [...], "total": 10}: an API envelope → the list is the table
+        if str(key).lower() in WRAPPER_KEYS and all(not isinstance(v, (dict, list)) for v in others.values()):
+            return lists[key]
+        # one record with a nested list (a person and their addresses): one row per item,
+        # with the record's own fields repeated, so nothing is lost
+        return [{**others, **{f"{key}.{k}": v for k, v in (item.items() if isinstance(item, dict) else [("valor", item)])}}
+                for item in lists[key]]
     raise UserError("This JSON isn't a table (expected a list of records).")
 
 

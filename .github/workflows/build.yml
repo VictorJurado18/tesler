@@ -7,7 +7,7 @@ name: Build and release
 
 on:
   push:
-    branches: [main, visual-novo]
+    branches: [main]
     paths-ignore: ["README.md", "docs/**"]
   pull_request:
   workflow_dispatch:
@@ -43,10 +43,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt pyinstaller pytest
+          pip install -r requirements.txt pyinstaller pytest pytest-github-actions-annotate-failures
 
       - name: Run tests
-        run: python -m pytest -q
+        run: python -m pytest -q -rfE --tb=short
         env:
           QT_QPA_PLATFORM: offscreen
 

@@ -7,7 +7,7 @@ from PySide6.QtCore import QSettings, Qt, Signal
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QGridLayout, QHBoxLayout, QLabel,
                                QPushButton, QSlider, QVBoxLayout)
 
-from . import __version__
+from . import __version__, theme
 from .util import CONFIG
 from .window import GlassWindow
 from .i18n import LANGUAGES, set_language, tr
@@ -59,6 +59,7 @@ class Settings:
 
     def set(self, key, value):
         self.q.setValue(key, value)
+        self.q.sync()        # on disk now, whatever happens to the process later
         self.apply()
 
     def apply(self):
@@ -145,6 +146,7 @@ DPIS = [(150, "150 dpi · small"), (200, "200 dpi · balanced"), (300, "300 dpi 
 class SettingsWindow(GlassWindow):
     changed = Signal()
     check_updates = Signal()
+    restart_requested = Signal()
 
     def __init__(self, settings: Settings):
         super().__init__(tr("Settings"), size=(560, 690))
@@ -213,10 +215,19 @@ class SettingsWindow(GlassWindow):
         self.theme.currentIndexChanged.connect(lambda _: self._save("theme", self.theme.currentData()))
         grid.addWidget(self.theme, r, 1)
         r += 1
+        hint_row = QHBoxLayout()
         lang_hint = QLabel(tr("Takes effect after restarting Tesler"))
         lang_hint.setObjectName("dim")
-        grid.addWidget(lang_hint, r, 1)
+        self.restart_btn = QPushButton(tr("Restart now"))
+        self.restart_btn.setObjectName("primary")
+        self.restart_btn.clicked.connect(self.restart_requested.emit)
+        self.restart_btn.hide()
+        hint_row.addWidget(lang_hint, 1)
+        hint_row.addWidget(self.restart_btn)
+        grid.addLayout(hint_row, r, 1)
         r += 1
+        for box in (self.lang, self.style_box, self.theme):
+            box.currentIndexChanged.connect(lambda _: self.restart_btn.show())
 
         if IS_WIN or IS_MAC or IS_LINUX:
             self.auto = QCheckBox(tr("Start Tesler with Windows" if IS_WIN else "Open Tesler at login"))
@@ -248,7 +259,8 @@ class SettingsWindow(GlassWindow):
         self.body.addStretch(1)
         about = QLabel(tr("Tesler {v}  ·  originals are never modified", v=__version__) + "<br>"
                        + tr("Based on {link} by llamaboi55",
-                            link='<a href="https://github.com/llamaboi55/DragShift">DragShift</a>'))
+                            link='<a href="https://github.com/llamaboi55/DragShift" style="color:'
+                                 + theme.current().accent_text + '">DragShift</a>'))
         about.setObjectName("dim")
         about.setOpenExternalLinks(True)
         done = QPushButton(tr("Done"))

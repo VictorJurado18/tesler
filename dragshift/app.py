@@ -532,7 +532,22 @@ class DragShiftApp(QObject):
         w = SettingsWindow(self.settings)
         w.changed.connect(self._settings_changed)
         w.check_updates.connect(self.open_updates)
+        w.restart_requested.connect(self.restart)
         self.open_window(w)
+
+    def restart(self):
+        """Start a fresh copy (it waits for this one to quit) and quit: new look, theme or language."""
+        import subprocess
+        self.settings.q.sync()
+        args = ["--quiet", f"--after-pid={os.getpid()}"]
+        cmd = [sys.executable, *args] if getattr(sys, "frozen", False) else [sys.executable, "-m", "dragshift", *args]
+        flags = 0x00000008 | 0x00000200 if IS_WIN else 0   # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+        try:
+            subprocess.Popen(cmd, creationflags=flags, close_fds=True,
+                             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        except OSError:
+            return
+        QTimer.singleShot(200, self.qapp.quit)
 
     # ---- updates
     def open_updates(self, release=None):

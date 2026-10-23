@@ -11,9 +11,42 @@ def ipc_name() -> str:
     return "Tesler-" + (os.environ.get("USERNAME") or os.environ.get("USER") or "user")
 
 
+def wait_for_previous(argv: list[str], timeout: float = 10.0) -> None:
+    """--after-pid=N (a restart): wait until that copy has quit, so we start fresh instead of handing off."""
+    pid = next((a.split("=", 1)[1] for a in argv if a.startswith("--after-pid=")), "")
+    if not pid.isdigit():
+        return
+    pid = int(pid)
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            from ctypes import wintypes
+            k32 = ctypes.WinDLL("kernel32")
+            k32.OpenProcess.restype = wintypes.HANDLE
+            k32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+            k32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+            k32.CloseHandle.argtypes = [wintypes.HANDLE]
+            h = k32.OpenProcess(0x00100000, False, pid)   # SYNCHRONIZE
+            if h:
+                k32.WaitForSingleObject(h, int(timeout * 1000))
+                k32.CloseHandle(h)
+        except Exception:
+            pass
+        return
+    import time
+    end = time.time() + timeout
+    while time.time() < end:
+        try:
+            os.kill(pid, 0)
+        except OSError:
+            return
+        time.sleep(0.1)
+
+
 def try_handoff(argv: list[str]) -> bool:
     if "--selftest" in argv:
         return False
+    wait_for_previous(argv)
     files = [os.path.abspath(a) for a in argv[1:] if not a.startswith("-") and os.path.exists(a)]
     payload = {"files": files} if files else {"show": "--quiet" not in argv}
     data = json.dumps(payload).encode("utf-8")

@@ -46,7 +46,15 @@ jobs:
           pip install -r requirements.txt pyinstaller pytest pytest-github-actions-annotate-failures
 
       - name: Run tests
-        run: python -m pytest -q -rfE --tb=short
+        shell: pwsh
+        run: |
+          python -m pytest -q -rfE --tb=short -p no:cacheprovider 2>&1 | Tee-Object -FilePath pytest.txt
+          $code = $LASTEXITCODE
+          if ($code -ne 0) {
+            $tail = (Get-Content pytest.txt -Tail 60) -join "%0A"
+            Write-Output "::error title=pytest exit $code::$tail"
+            exit $code
+          }
         env:
           QT_QPA_PLATFORM: offscreen
 
@@ -151,6 +159,8 @@ jobs:
           **Portátil:** Tesler-Portable.exe roda sem instalar.
 
           Na primeira vez, o Windows pode mostrar "O Windows protegeu o computador": clique em **Mais informações → Executar assim mesmo**.
+
+          Curtiu o Tesler? Um cafezinho via Pix ajuda a manter o projeto vivo: [veja como apoiar](https://github.com/VictorJurado18/tesler#curtiu-o-tesler). ☕
           EOF
           cat notes.md
 

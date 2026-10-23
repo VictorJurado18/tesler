@@ -50,7 +50,6 @@ PT: dict[str, str] = {
     "Open a file…": "Abrir um arquivo…",
     "Settings…": "Configurações…",
     "How to use": "Como usar",
-    "Tip the developer ♥": "Apoiar o desenvolvedor original ♥",
     "Quit {app}": "Sair do {app}",
     "{app} — press {key} while dragging a file": "{app} — aperte {key} enquanto arrasta um arquivo",
     "Tesler is already running": "O Tesler já está aberto",
@@ -583,6 +582,15 @@ PT: dict[str, str] = {
     "What's new in Tesler {v}": "Novidades do Tesler {v}",
     "You're up to date. Here is what changed.": "Você está atualizado. Veja o que mudou.",
     "All versions": "Todas as versões", "No notes for this version.": "Sem notas para esta versão.",
+    "Support Tesler ♥": "Apoiar o Tesler ♥", "Support Tesler": "Apoiar o Tesler",
+    "Enjoying Tesler?": "Curtiu o Tesler?",
+    "If it saved you some time, a coffee helps keep the project alive. Using the app stays 100% free. ☕":
+        "Se ele te poupou um tempinho, um cafezinho ajuda a manter o projeto vivo. Mas fica tranquilo: usar o app continua 100% livre. ☕",
+    "Pix key (copy and paste)": "Chave Pix (copie e cole)",
+    "Recipient: {name} · São Paulo": "Recebedor: {name} · São Paulo",
+    "Tesler is based on {link}: you can thank its original author too.":
+        "O Tesler é baseado no {link}: dá para agradecer o autor original também.",
+    "Copy Pix key": "Copiar chave Pix",
     "Look": "Visual", "Native (Windows 11)": "Nativo (Windows 11)", "Liquid glass (classic)": "Vidro líquido (clássico)",
     "Theme": "Tema", "Same as Windows": "Igual ao Windows", "Dark": "Escuro", "Light": "Claro",
     "Arrow": "Seta", "Box": "Caixa", "Circle": "Círculo", "Pen": "Caneta", "Marker": "Marca-texto",

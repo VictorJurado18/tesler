@@ -8,8 +8,8 @@ import time
 import traceback
 from pathlib import Path
 
-from PySide6.QtCore import QDir, QObject, QPointF, QRunnable, Qt, QThreadPool, QTimer, QUrl, Signal
-from PySide6.QtGui import (QAction, QColor, QCursor, QDesktopServices, QGuiApplication, QIcon, QPainter,
+from PySide6.QtCore import QDir, QObject, QPointF, QRunnable, Qt, QThreadPool, QTimer, Signal
+from PySide6.QtGui import (QAction, QColor, QCursor, QGuiApplication, QIcon, QPainter,
                            QPixmap)
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication, QFileDialog, QMenu, QSystemTrayIcon, QWidget
@@ -22,7 +22,6 @@ from .trigger import DragShiftWatcher
 from .util import UserError, category, file_size, human_size, keep, release
 
 APP_NAME = "Tesler"
-TIP_URL = "https://cash.app/$AtikaKadesha"
 VERSION = __version__
 IS_WIN = sys.platform == "win32"
 IS_MAC = sys.platform == "darwin"
@@ -194,7 +193,7 @@ class DragShiftApp(QObject):
         m.addAction(tr("Settings…"), self.open_settings)
         m.addAction(tr("How to use"), self.show_welcome)
         m.addAction(tr("Check for updates…"), self.open_updates)
-        m.addAction(tr("Tip the developer ♥"), lambda: QDesktopServices.openUrl(QUrl(TIP_URL)))
+        m.addAction(tr("Support Tesler ♥"), self.show_support)
         m.addSeparator()
         m.addAction(tr("Quit {app}", app=APP_NAME), self.qapp.quit)
         self.tray_menu = m
@@ -544,6 +543,10 @@ class DragShiftApp(QObject):
                 return
         self.open_window(UpdateWindow(release))
 
+    def show_support(self):
+        from .support import SupportWindow
+        self.open_window(SupportWindow())
+
     def show_whats_new(self):
         from .updatewin import WhatsNewWindow
         self.open_window(WhatsNewWindow())
@@ -770,6 +773,8 @@ def selftest() -> int:
             assert updater.notes_for(VERSION), "CHANGELOG.md has no section for this version"
             UpdateWindow(updater.Release("99.0.0", "- x", updater.RELEASES_PAGE)).close()
             WhatsNewWindow().close()
+            from .support import SupportWindow
+            SupportWindow().close()
             check_text_renders()
         print("SELFTEST OK")
         return 0

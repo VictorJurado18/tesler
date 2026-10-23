@@ -38,6 +38,7 @@ Tudo roda no seu computador: nenhum arquivo é enviado para a internet, nem para
 - [Ferramentas novas em destaque](#ferramentas-novas-em-destaque)
 - [Instalação](#instalação)
 - [Configurações](#configurações)
+- [Curtiu o Tesler?](#curtiu-o-tesler)
 - [Créditos](#créditos)
 - [Licença](#licença)
 - [Para desenvolvedores](#para-desenvolvedores)
@@ -213,6 +214,19 @@ Idioma e visual valem depois de reiniciar o app.
 
 > [!NOTE]
 > Quem usava o DragShift não perde nada: na primeira vez que o Tesler abre, ele traz as configurações, as assinaturas salvas, o modelo de IA e a inicialização com o Windows.
+
+---
+
+## Curtiu o Tesler?
+
+Se ele te poupou um tempinho, um cafezinho ajuda a manter o projeto vivo. Mas fica tranquilo: usar o app continua 100% livre. ☕
+
+<img src="docs/img/pix.png" width="220" alt="QR Code Pix para Victor Nemeth Jurado">
+
+**Pix (copie e cole):** `f608aca6-81f0-4c41-a77f-347777f75b0e`<br>
+**Recebedor:** Victor Nemeth Jurado · São Paulo
+
+No app, o mesmo QR Code fica em botão direito no ícone da bandeja → **Apoiar o Tesler ♥**.
 
 ---
 

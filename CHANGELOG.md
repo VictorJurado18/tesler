@@ -2,6 +2,12 @@
 
 Cada versão publicada tem uma seção aqui. O app mostra a seção da versão nova na primeira vez que ela abre, e o GitHub usa o mesmo texto nas notas do release.
 
+## 2.0.1
+
+### Correções
+- **Word → PDF sem o Word instalado:** as imagens do documento agora aparecem no PDF. Antes elas sumiam. O texto centralizado continua centralizado e as tabelas ocupam a largura da página.
+- **Vídeo → GIF:** o GIF agora pode ter até 60 segundos (antes eram 20). Se o vídeo for mais longo, a notificação avisa que o GIF ficou só com o começo.
+
 ## 2.0.0
 
 **Primeira versão do Tesler**, baseada no [DragShift](https://github.com/llamaboi55/DragShift) 1.1.0.

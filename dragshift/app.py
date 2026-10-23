@@ -686,13 +686,8 @@ def main(argv: list[str] | None = None) -> int:
     qapp.setWindowIcon(make_icon())
 
     if "--selftest" in argv:
-        code = selftest()
-        for stream in (sys.stdout, sys.stderr):
-            try:
-                stream.flush()
-            except Exception:
-                pass
-        os._exit(code)   # skip interpreter teardown: native libraries can crash there after a clean run
+        from .util import hard_exit
+        hard_exit(selftest())   # skip teardown: native libraries can crash there after a clean run
     files = [os.path.abspath(a) for a in argv[1:] if not a.startswith("-") and os.path.exists(a)]
     # already running? hand over and exit (instant: no second UI start-up)
     if send_to_running({"files": files} if files else {"show": "--quiet" not in argv}):
@@ -710,7 +705,14 @@ def main(argv: list[str] | None = None) -> int:
     elif "--quiet" not in argv:
         QTimer.singleShot(400, lambda: app.toasts.info(
             tr("Tesler is running"), tr("Drag any file, then press {key}.", key=app.trigger_label())))
-    return qapp.exec()
+    code = qapp.exec()
+    try:
+        app.settings.q.sync()   # write settings out before skipping teardown
+    except Exception:
+        pass
+    from .util import hard_exit
+    hard_exit(code)   # same at quit: no crash report after a normal exit
+    return code
 
 
 def check_text_renders():

@@ -65,6 +65,25 @@ def unique_path(path: str | Path) -> Path:
         i += 1
 
 
+def hard_exit(code: int = 0):
+    """Leave now, skipping interpreter and DLL teardown (a native library can crash there after
+    everything finished fine). On Windows even os._exit runs DLL detach code, so terminate."""
+    import sys
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.flush()
+        except Exception:
+            pass
+    if os.name == "nt":
+        try:
+            import ctypes
+            k32 = ctypes.windll.kernel32
+            k32.TerminateProcess(k32.GetCurrentProcess(), int(code))
+        except Exception:
+            pass
+    os._exit(int(code))
+
+
 APP_NAME = "Tesler"
 OLD_NAME = "DragShift"   # the project this app is based on; its data folder is moved over once
 

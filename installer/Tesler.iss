@@ -1,7 +1,7 @@
 ; Inno Setup script — per-user install, no admin rights needed.
 #define AppVersion GetEnv("DS_VERSION")
 #if AppVersion == ""
-  #define AppVersion "1.1.0"
+  #define AppVersion "0.0.0"
 #endif
 
 [Setup]
@@ -46,6 +46,14 @@ Root: HKCU; Subkey: "Software\Tesler"; Flags: uninsdeletekey
 
 [Run]
 Filename: "{app}\Tesler.exe"; Description: "Launch Tesler now"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\Tesler.exe"; Parameters: "--quiet"; Flags: nowait; Check: Relaunch
 
 [UninstallRun]
 Filename: "{cmd}"; Parameters: "/C taskkill /F /IM Tesler.exe"; Flags: runhidden; RunOnceId: "KillTesler"
+
+[Code]
+// The app's updater runs the installer with /RELAUNCH=1: start the new version when done.
+function Relaunch: Boolean;
+begin
+  Result := WizardSilent and (ExpandConstant('{param:RELAUNCH|0}') = '1');
+end;

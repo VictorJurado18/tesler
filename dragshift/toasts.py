@@ -240,6 +240,11 @@ class ToastCard(QWidget):
             if r.contains(e.position()):
                 self._act(name)
                 return
+        if callable(getattr(self, "on_click", None)):
+            cb, self.on_click = self.on_click, None
+            self.dismiss()
+            cb()
+            return
         if self.state == "done" and self.result and self.result.outs:
             reveal(self.result.outs[0])
             self.dismiss()

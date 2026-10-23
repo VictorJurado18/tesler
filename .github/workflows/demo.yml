@@ -1,9 +1,7 @@
 name: Record demo video
 
 on:
-  push:
-    branches: [demo]
-  workflow_dispatch:
+  workflow_dispatch:   # manual only (inherited from DragShift; not maintained for Tesler)
 
 permissions:
   contents: write

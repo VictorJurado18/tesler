@@ -7,9 +7,9 @@ heif_datas, heif_bins, heif_hidden = collect_all("pillow_heif")
 
 a = Analysis(
     ["run.py"],
-    datas=[("dragshift/assets", "dragshift/assets")] + heif_datas,
+    datas=[("dragshift/assets", "dragshift/assets"), ("CHANGELOG.md", ".")] + heif_datas,
     binaries=heif_bins,
-    hiddenimports=["win32com.client", "pythoncom", "PySide6.QtNetwork", "AppKit", "Quartz", "objc",
+    hiddenimports=["win32com.client", "pythoncom", "PySide6.QtNetwork", "PySide6.QtSvg", "AppKit", "Quartz", "objc",
                    "winrt.windows.media.ocr", "winrt.windows.globalization", "winrt.windows.graphics.imaging",
                    "winrt.windows.storage.streams", "winrt.windows.foundation",
                    "winrt.windows.foundation.collections"] + heif_hidden,
@@ -23,7 +23,7 @@ DROP = ("Qt6Quick", "Qt6Qml", "Qt6Pdf", "Qt6WebEngine", "Qt63D", "Qt6Multimedia"
         "Qt6VirtualKeyboard", "Qt6Designer", "Qt6ShaderTools", "Qt6Sql", "Qt6Test", "opengl32sw",
         "Qt6OpenGL", "Qt6DataVisualization", "Qt6Positioning", "Qt6Sensors", "Qt6SerialPort",
         "Qt6Bluetooth", "Qt6Nfc", "Qt6RemoteObjects", "Qt6Scxml", "Qt6SpatialAudio", "Qt6TextToSpeech",
-        "Qt6WebChannel", "Qt6WebSockets", "Qt6Svg", "qtquick", "qml",
+        "Qt6WebChannel", "Qt6WebSockets", "qtquick", "qml",
         "libgtk-3", "libgdk-3", "libqgtk3", "libatk-")
 a.binaries = [b for b in a.binaries if not any(d.lower() in b[0].lower() for d in DROP)]
 a.datas = [d for d in a.datas if "translations" not in d[0].replace("\\", "/")]
@@ -51,8 +51,8 @@ if IS_MAC:
         info_plist={
             "CFBundleName": "Tesler",
             "CFBundleDisplayName": "Tesler",
-            "CFBundleShortVersionString": "1.1.0",
-            "CFBundleVersion": "1.1.0",
+            "CFBundleShortVersionString": __import__("dragshift").__version__,
+            "CFBundleVersion": __import__("dragshift").__version__,
             "LSUIElement": True,                 # menu-bar app, no Dock icon
             "LSMinimumSystemVersion": "11.0",
             "NSHighResolutionCapable": True,

@@ -181,6 +181,8 @@ QPushButton#swatch:checked {{ border: 2px solid {t.text}; }}
 
 QSlider {{ min-height: 22px; }}
 QSlider::groove:horizontal {{ height: 4px; background: {t.track}; border-radius: 2px; }}
+QProgressBar {{ background: {t.track}; border: none; border-radius: 3px; }}
+QProgressBar::chunk {{ background: {t.accent}; border-radius: 3px; }}
 QSlider::sub-page:horizontal {{ background: {t.accent}; border-radius: 2px; }}
 QSlider::handle:horizontal {{
   width: 20px; height: 20px; margin: -8px 0; border-radius: 10px; border: 1px solid {t.stroke};
@@ -300,6 +302,8 @@ QMenu::item:selected {{ background: rgba(255,255,255,0.15); }}
 """
 
 _QSS_CLASSIC_EXTRA = f"""
+QProgressBar {{ background: rgba(255,255,255,0.18); border: none; border-radius: 3px; }}
+QProgressBar::chunk {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #5b8cff, stop:1 #c86bff); border-radius: 3px; }}
 QLabel#heading {{ font-size: 13pt; font-weight: 600; }}
 QWidget#segbar {{ background: transparent; border: none; }}
 QPushButton#seg {{ border-radius: 15px; padding: 6px 15px; }}

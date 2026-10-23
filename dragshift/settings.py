@@ -30,6 +30,9 @@ DEFAULTS = {
     "language": "auto",
     "theme": "auto",
     "style": "native",
+    "auto_update": True,
+    "last_check": 0,
+    "last_version": "",
 }
 
 
@@ -141,9 +144,10 @@ DPIS = [(150, "150 dpi · small"), (200, "200 dpi · balanced"), (300, "300 dpi 
 
 class SettingsWindow(GlassWindow):
     changed = Signal()
+    check_updates = Signal()
 
     def __init__(self, settings: Settings):
-        super().__init__(tr("Settings"), size=(560, 640))
+        super().__init__(tr("Settings"), size=(560, 690))
         self.s = settings
         grid = QGridLayout()
         grid.setHorizontalSpacing(14)
@@ -228,6 +232,18 @@ class SettingsWindow(GlassWindow):
                 glass_btn.clicked.connect(platform_mac.request_screen_recording)
                 grid.addWidget(glass_btn, r, 1)
                 r += 1
+        grid.addWidget(QLabel(tr("Updates")), r, 0)
+        up = QHBoxLayout()
+        self.auto_up = QCheckBox(tr("Check automatically"))
+        self.auto_up.setChecked(self.s.get("auto_update"))
+        self.auto_up.toggled.connect(lambda on: self._save("auto_update", on))
+        check = QPushButton(tr("Check now"))
+        check.clicked.connect(self.check_updates.emit)
+        up.addWidget(self.auto_up)
+        up.addStretch(1)
+        up.addWidget(check)
+        grid.addLayout(up, r, 1)
+        r += 1
         self.body.addLayout(grid)
         self.body.addStretch(1)
         about = QLabel(tr("Tesler {v}  ·  originals are never modified", v=__version__) + "<br>"

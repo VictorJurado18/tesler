@@ -169,24 +169,28 @@ E nas notificações:
 
 ## Instalação
 
-Por enquanto o Tesler roda a partir do código-fonte. Leva uns 5 minutos na primeira vez:
+1. Baixe o **[Tesler-Setup.exe](https://github.com/VictorJurado18/tesler/releases/latest/download/Tesler-Setup.exe)** da [página de versões](https://github.com/VictorJurado18/tesler/releases/latest).
+2. Abra e siga o instalador. Ele instala só para o seu usuário, então não pede senha de administrador. Pronto: o Tesler fica na bandeja do sistema, ao lado do relógio.
 
-1. Instale o **[Miniconda](https://docs.conda.io/en/latest/miniconda.html)** (Python 3.12).
-2. Baixe este repositório e, num terminal dentro da pasta, crie o ambiente:
-   ```bat
-   conda create -n dragshift python=3.12 -y
-   conda activate dragshift
-   pip install -r requirements.txt
-   ```
-3. Dê dois cliques em **`Iniciar Tesler.bat`**.
+O instalador também cria o atalho no menu Iniciar, a opção **Tesler…** no botão direito dos arquivos, o **Enviar para → Tesler** e, se você quiser, a inicialização com o Windows. Para desinstalar: Configurações do Windows → Aplicativos.
 
-O `.bat` confere e instala sozinho os componentes que faltarem sempre que o projeto for atualizado. Depois de aberto, o Tesler fica na bandeja do sistema, ao lado do relógio.
+Prefere não instalar? Baixe o **Tesler-Portable.exe** e rode de qualquer pasta.
 
-> [!TIP]
-> Em **Configurações**, marque **Iniciar o Tesler com o Windows** para não precisar abrir toda vez.
+> [!WARNING]
+> Na primeira vez, o Windows pode mostrar **"O Windows protegeu o computador"**, porque o app ainda não tem assinatura digital paga. Clique em **Mais informações → Executar assim mesmo**. O código é todo aberto, aqui neste repositório.
 
 > [!NOTE]
 > Na primeira vez que usar **Sem fundo**, o Tesler baixa o modelo de IA (cerca de 170 MB) para `%LOCALAPPDATA%\Tesler\models`. Depois disso funciona offline.
+
+### Atualizações automáticas
+
+O Tesler procura versões novas uma vez por dia. Quando sai uma, aparece uma notificação: clique, veja o que mudou e toque em **Atualizar agora**. Ele baixa, confere o arquivo, instala, fecha e abre sozinho. Na primeira vez que a versão nova abre, ela mostra as novidades.
+
+<p align="center">
+  <img src="docs/img/update.png" alt="Janela de atualização disponível e janela de novidades" width="100%">
+</p>
+
+Também dá para procurar na hora: botão direito no ícone da bandeja → **Procurar atualizações…**, ou em **Configurações → Atualizações → Verificar agora**. A verificação automática pode ser desligada ali.
 
 ---
 
@@ -203,6 +207,7 @@ Clique com o botão direito no ícone da bandeja → **Configurações**:
 | **Onde salvar** | Ao lado do original ou numa subpasta `Tesler` |
 | **Qualidade** | JPG/WebP e resolução de PDF → imagem |
 | **Iniciar com o Windows** | Liga ou desliga |
+| **Atualizações** | Verificar automaticamente · Verificar agora |
 
 Idioma e visual valem depois de reiniciar o app.
 
@@ -239,15 +244,37 @@ Algumas dependências têm licenças próprias, que valem quando você distribui
 
 ## Para desenvolvedores
 
+### Rodar pelo código-fonte
+
+1. Instale o **[Miniconda](https://docs.conda.io/en/latest/miniconda.html)** e crie o ambiente:
+   ```bat
+   conda create -n dragshift python=3.12 -y
+   conda activate dragshift
+   pip install -r requirements.txt
+   ```
+2. Dê dois cliques em **`Iniciar Tesler.bat`**. Ele instala sozinho os componentes que faltarem sempre que o projeto mudar.
+
 ```bash
-conda activate dragshift
 python -m dragshift            # abre o app
 python -m dragshift --selftest # testa todas as conversões e janelas
 python -m pytest -q            # testes (rodam nos dois visuais)
 ```
 
+### Publicar uma versão nova
+
+O GitHub Actions faz tudo. Para lançar a versão `2.1.0`, por exemplo:
+
+1. Troque o número em `dragshift/__init__.py` para `__version__ = "2.1.0"`.
+2. Escreva as novidades em `CHANGELOG.md`, numa seção `## 2.1.0` no topo.
+3. Mande para a `main`.
+
+O workflow [`build.yml`](.github/workflows/build.yml) roda os testes, gera o app, o instalador e o portátil, testa a instalação de verdade num Windows e publica o release `v2.1.0` com as notas do CHANGELOG. A partir daí, quem tem o Tesler instalado recebe a atualização. Push sem mudar a versão só gera o build, sem publicar nada.
+
+### Organização do código
+
 - O código fica em `dragshift/` (o nome interno do pacote foi mantido para não quebrar instalações existentes).
 - O visual é controlado por `theme.py` (cores, tema, cor de destaque do Windows) e `glass.py` (folha de estilo e o vidro clássico). Os ícones de traço estão em `icons.py`.
+- As atualizações ficam em `updater.py` (GitHub Releases, download conferido por SHA-256) e `updatewin.py` (janelas).
 - Os logs ficam em `%LOCALAPPDATA%\Tesler\log.txt`.
 - O código herdado ainda traz suporte a **Mac** e **Linux**, mas as ferramentas novas foram feitas e testadas só no **Windows** (o OCR, por exemplo, usa o motor do próprio Windows).
 

@@ -193,6 +193,7 @@ class DragShiftApp(QObject):
         m.addSeparator()
         m.addAction(tr("Settings…"), self.open_settings)
         m.addAction(tr("How to use"), self.show_welcome)
+        m.addAction(tr("Check for updates…"), self.open_updates)
         m.addAction(tr("Tip the developer ♥"), lambda: QDesktopServices.openUrl(QUrl(TIP_URL)))
         m.addSeparator()
         m.addAction(tr("Quit {app}", app=APP_NAME), self.qapp.quit)
@@ -530,7 +531,59 @@ class DragShiftApp(QObject):
     def open_settings(self):
         w = SettingsWindow(self.settings)
         w.changed.connect(self._settings_changed)
+        w.check_updates.connect(self.open_updates)
         self.open_window(w)
+
+    # ---- updates
+    def open_updates(self, release=None):
+        from .updatewin import UpdateWindow
+        for w in self.windows:
+            if isinstance(w, UpdateWindow):
+                w.raise_()
+                w.activateWindow()
+                return
+        self.open_window(UpdateWindow(release))
+
+    def show_whats_new(self):
+        from .updatewin import WhatsNewWindow
+        self.open_window(WhatsNewWindow())
+
+    def startup_update_tasks(self, show_welcome: bool):
+        """Once per new version: what's new. At most daily, quietly: is there a newer release?"""
+        from . import updater
+        last = self.settings.get("last_version")
+        if last != VERSION:
+            self.settings.q.setValue("last_version", VERSION)
+            if last and not show_welcome and updater.is_newer(VERSION, last) and updater.notes_for(VERSION):
+                QTimer.singleShot(900, self.show_whats_new)
+        if not self.settings.get("auto_update"):
+            return
+        now = int(time.time())
+        if now - self.settings.get("last_check") < updater.CHECK_EVERY:
+            return
+        QTimer.singleShot(20000, self._auto_check)
+
+    def _auto_check(self):
+        import threading
+        from . import updater
+        self.settings.q.setValue("last_check", int(time.time()))
+        sig = _Sig(self)
+        sig.done.connect(self._offer_update)
+
+        def work():
+            try:
+                rel = updater.fetch_latest()
+            except Exception:  # noqa: BLE001  offline: try again next start
+                return
+            if rel is not None and updater.is_newer(rel.version):
+                sig.done.emit(rel)
+        threading.Thread(target=work, daemon=True).start()
+        self._update_sig = sig
+
+    def _offer_update(self, rel):
+        card = self.toasts.info(tr("Tesler {v} is available", v=rel.version),
+                                tr("Click to see what's new and update."), 15000)
+        card.on_click = lambda: self.open_updates(rel)
 
     def _settings_changed(self):
         self.watcher.set_key(self.settings.get("trigger"))
@@ -630,7 +683,13 @@ def main(argv: list[str] | None = None) -> int:
     qapp.setWindowIcon(make_icon())
 
     if "--selftest" in argv:
-        return selftest()
+        code = selftest()
+        for stream in (sys.stdout, sys.stderr):
+            try:
+                stream.flush()
+            except Exception:
+                pass
+        os._exit(code)   # skip interpreter teardown: native libraries can crash there after a clean run
     files = [os.path.abspath(a) for a in argv[1:] if not a.startswith("-") and os.path.exists(a)]
     # already running? hand over and exit (instant: no second UI start-up)
     if send_to_running({"files": files} if files else {"show": "--quiet" not in argv}):
@@ -639,9 +698,11 @@ def main(argv: list[str] | None = None) -> int:
     qapp.file_opened.connect(lambda f: app.queue_files([f]))
     if qapp.early_files:
         app.queue_files(list(qapp.early_files))
+    first_run = not app.settings.get("welcomed")
+    app.startup_update_tasks(show_welcome=first_run)
     if files:  # e.g. "Send to → Tesler" or drag onto the .exe
         QTimer.singleShot(120, lambda: app.queue_files(files))
-    elif not app.settings.get("welcomed"):
+    elif first_run:
         QTimer.singleShot(300, app.show_welcome)
     elif "--quiet" not in argv:
         QTimer.singleShot(400, lambda: app.toasts.info(
@@ -704,6 +765,11 @@ def selftest() -> int:
                       tools.PeekWindow(str(Path(d) / "n.txt"), n), tools.CollageWindow([str(src), str(src)], n)):
                 w.close()
             ToastStack().info("ok", "ok").dismiss()
+            from . import updater
+            from .updatewin import UpdateWindow, WhatsNewWindow
+            assert updater.notes_for(VERSION), "CHANGELOG.md has no section for this version"
+            UpdateWindow(updater.Release("99.0.0", "- x", updater.RELEASES_PAGE)).close()
+            WhatsNewWindow().close()
             check_text_renders()
         print("SELFTEST OK")
         return 0

@@ -1,20 +1,29 @@
-name: Build Windows app
+name: Build and release
+
+# Every push and pull request builds and tests the Windows app.
+# A push to main whose version (dragshift/__init__.py) has no release yet publishes one:
+# tag vX.Y.Z, Tesler-Setup.exe, Tesler-Portable.exe and SHA256SUMS.txt, with notes from CHANGELOG.md.
+# The app's updater reads that release.
 
 on:
   push:
-    branches: [main]
-    tags: ["v*"]
-    paths-ignore: ["**.md", "docs/**"]
+    branches: [main, visual-novo]
+    paths-ignore: ["README.md", "docs/**"]
   pull_request:
   workflow_dispatch:
 
 permissions:
   contents: write
-  actions: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   windows:
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -22,6 +31,14 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+
+      - name: Read version
+        id: ver
+        shell: pwsh
+        run: |
+          $v = python installer/stamp_version.py
+          "version=$v" >> $env:GITHUB_OUTPUT
+          "Building Tesler $v"
 
       - name: Install dependencies
         run: |
@@ -36,25 +53,29 @@ jobs:
       - name: Build app folder (for the installer)
         run: pyinstaller Tesler.spec --noconfirm
 
-      - name: Build portable Tesler.exe
-        run: pyinstaller Tesler.spec --noconfirm
+      - name: Build portable exe
+        shell: pwsh
         env:
           ONEFILE: "1"
+        run: |
+          pyinstaller Tesler.spec --noconfirm
+          Move-Item dist\Tesler.exe dist\Tesler-Portable.exe -Force
 
-      - name: Smoke-test both builds
+      - name: Self-test both builds
         shell: pwsh
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          foreach ($exe in @("dist\Tesler\Tesler.exe", "dist\Tesler.exe")) {
+          foreach ($exe in @("dist\Tesler\Tesler.exe", "dist\Tesler-Portable.exe")) {
             $p = Start-Process -FilePath $exe -ArgumentList "--selftest" -Wait -PassThru
             if ($p.ExitCode -ne 0) { throw "Self-test failed for $exe ($($p.ExitCode))" }
             "Self-test passed: $exe"
           }
-          "{0:N1} MB portable" -f ((Get-Item dist\Tesler.exe).Length / 1MB)
 
       - name: Build installer
         shell: pwsh
+        env:
+          DS_VERSION: ${{ steps.ver.outputs.version }}
         run: |
           $iscc = @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe", "$env:ProgramFiles\Inno Setup 6\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
           if (-not $iscc) {
@@ -65,7 +86,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
           "{0:N1} MB installer" -f ((Get-Item dist\Tesler-Setup.exe).Length / 1MB)
 
-      - name: Test the installer (silent install, run, uninstall)
+      - name: Test the installer (silent install, self-test, uninstall)
         shell: pwsh
         run: |
           $p = Start-Process dist\Tesler-Setup.exe -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /TASKS=contextmenu" -Wait -PassThru
@@ -82,283 +103,73 @@ jobs:
           if (Test-Path "HKCU:\Software\Classes\*\shell\Tesler") { throw "Uninstall left the context menu behind" }
           "Installer OK"
 
+      - name: Checksums
+        shell: pwsh
+        run: |
+          Get-FileHash dist\Tesler-Setup.exe, dist\Tesler-Portable.exe -Algorithm SHA256 |
+            ForEach-Object { "{0}  {1}" -f $_.Hash.ToLower(), (Split-Path $_.Path -Leaf) } |
+            Set-Content dist\SHA256SUMS.txt -Encoding ascii
+          Get-Content dist\SHA256SUMS.txt
+
       - uses: actions/upload-artifact@v4
         with:
-          name: windows
+          name: tesler-windows
           path: |
-            dist/Tesler.exe
             dist/Tesler-Setup.exe
+            dist/Tesler-Portable.exe
+            dist/SHA256SUMS.txt
 
-      # Test-mode SignPath code signing: the unsigned executables are uploaded
-      # as a ZIP artifact (upload-artifact archives by default, matching the
-      # zip-file root of the SignPath artifact configuration), a test-signing
-      # request is submitted and awaited, then the unsigned artifact is deleted
-      # again so the release keeps publishing exactly what it published before.
-      - name: Upload unsigned artifact for SignPath
-        id: upload-unsigned-artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: unsigned
-          path: |
-            dist/Tesler.exe
-            dist/Tesler-Setup.exe
-
-      - name: Submit test signing request to SignPath
-        uses: signpath/github-action-submit-signing-request@v3
-        with:
-          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
-          organization-id: '9db07b33-5f87-47ac-b187-3dd1dfad5744'
-          project-slug: 'Tesler'
-          signing-policy-slug: 'test-signing'
-          artifact-configuration-slug: 'zip-with-signed-executables'
-          github-artifact-id: '${{ steps.upload-unsigned-artifact.outputs.artifact-id }}'
-          wait-for-completion: true
-          output-artifact-directory: 'signed'
-
-      - name: Delete unsigned artifact
-        if: always() && steps.upload-unsigned-artifact.outputs.artifact-id != ''
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/${{ steps.upload-unsigned-artifact.outputs.artifact-id }}"
-
-  macos:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: macos-15
-            arch: apple-silicon
-          - runner: macos-15-intel
-            arch: intel
-    runs-on: ${{ matrix.runner }}
+  release:
+    needs: windows
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.windows.outputs.version }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - name: Install dependencies
+      - name: Is this version already released?
+        id: check
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt pyinstaller pytest
-
-      - name: Run tests
-        run: python -m pytest -q
-        env:
-          QT_QPA_PLATFORM: offscreen
-
-      - name: Build Tesler.app
-        run: pyinstaller Tesler.spec --noconfirm
-
-      - name: Self-test the app bundle
-        env:
-          QT_QPA_PLATFORM: offscreen
-        run: |
-          dist/Tesler.app/Contents/MacOS/Tesler --selftest
-          codesign --verify --deep --verbose=2 dist/Tesler.app || true
-          /usr/libexec/PlistBuddy -c "Print :LSUIElement" dist/Tesler.app/Contents/Info.plist
-
-      - name: Sign & notarize the app (only when Apple credentials are configured)
-        env:
-          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
-          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
-          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          if [ -z "$MACOS_CERT_P12" ]; then
-            echo "No Apple Developer ID configured: shipping ad-hoc signed (users see Gatekeeper's warning)."
-            exit 0
-          fi
-          KC=build.keychain; KCPW=$(uuidgen)
-          echo "$MACOS_CERT_P12" | base64 --decode > cert.p12
-          security create-keychain -p "$KCPW" $KC
-          security set-keychain-settings -lut 21600 $KC
-          security unlock-keychain -p "$KCPW" $KC
-          security import cert.p12 -k $KC -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
-          security list-keychains -d user -s $KC $(security list-keychains -d user | tr -d '"')
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KCPW" $KC
-          # sign every nested binary first, then the bundle (hardened runtime + timestamp)
-          find dist/Tesler.app/Contents -type f \( -name "*.so" -o -name "*.dylib" -o -perm -111 \) -print0 |
-            xargs -0 -I{} codesign --force --timestamp --options runtime --entitlements installer/entitlements.plist --sign "$MACOS_SIGN_IDENTITY" "{}" || true
-          codesign --force --deep --timestamp --options runtime --entitlements installer/entitlements.plist --sign "$MACOS_SIGN_IDENTITY" dist/Tesler.app
-          codesign --verify --deep --strict --verbose=2 dist/Tesler.app
-          ditto -c -k --keepParent dist/Tesler.app Tesler.zip
-          xcrun notarytool submit Tesler.zip --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
-          xcrun stapler staple dist/Tesler.app
-          spctl --assess --type execute --verbose dist/Tesler.app
-          echo "SIGNED=1" >> $GITHUB_ENV
-
-      - name: Make the .dmg (drag Tesler to Applications)
-        run: |
-          mkdir -p dmg
-          cp -R dist/Tesler.app dmg/
-          ln -s /Applications dmg/Applications
-          hdiutil create -volname "Tesler" -srcfolder dmg -ov -format UDZO "dist/Tesler-mac-${{ matrix.arch }}.dmg"
-          du -h "dist/Tesler-mac-${{ matrix.arch }}.dmg"
-          if [ "$SIGNED" = "1" ]; then
-            codesign --force --timestamp --sign "${{ secrets.MACOS_SIGN_IDENTITY }}" "dist/Tesler-mac-${{ matrix.arch }}.dmg"
-            xcrun notarytool submit "dist/Tesler-mac-${{ matrix.arch }}.dmg" --apple-id "${{ secrets.APPLE_ID }}" --password "${{ secrets.APPLE_APP_PASSWORD }}" --team-id "${{ secrets.APPLE_TEAM_ID }}" --wait
-            xcrun stapler staple "dist/Tesler-mac-${{ matrix.arch }}.dmg"
+          if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "v$VERSION is already published: nothing to do (bump the version to release)."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: mac-${{ matrix.arch }}
-          path: dist/Tesler-mac-${{ matrix.arch }}.dmg
-
-  linux:
-    # Built on Debian 12 (glibc 2.36): the .deb runs on Debian 12/13, Ubuntu 23.04+, Mint 22, MX 23…
-    runs-on: ubuntu-latest
-    container: debian:12
-    steps:
-      - name: System packages
+      - name: Release notes from CHANGELOG.md
+        if: steps.check.outputs.exists == 'false'
         run: |
-          apt-get update -q
-          DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends \
-            git ca-certificates python3 python3-venv python3-dev binutils dpkg-dev file \
-            libx11-6 libxext6 libxrender1 libxkbcommon0 libxkbcommon-x11-0 libxcb1 libxcb-cursor0 \
-            libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 \
-            libxcb-shape0 libxcb-xfixes0 libxcb-xinerama0 libxcb-xkb1 libfontconfig1 libfreetype6 \
-            libdbus-1-3 libegl1 libgl1 libglib2.0-0 \
-            xvfb xfwm4 thunar xdotool dbus-x11 ffmpeg feh fonts-dejavu-core fonts-noto-core \
-            desktop-file-utils hicolor-icon-theme xdg-utils
+          python3 -c "from dragshift.updater import notes_for; print(notes_for())" > notes.md
+          if [ ! -s notes.md ]; then echo "CHANGELOG.md has no section for $VERSION" >&2; exit 1; fi
+          cat >> notes.md <<EOF
 
-      - uses: actions/checkout@v4
+          ---
+          **Instalar:** baixe **Tesler-Setup.exe** e abra (não pede administrador). Quem já tem o Tesler recebe esta versão pelo próprio app.
+          **Portátil:** Tesler-Portable.exe roda sem instalar.
 
-      - name: Python environment
-        run: |
-          # Python 3.12 (portable build via uv): Debian 12's 3.11 hits a C-extension refcount bug
-          # on None that is harmless on 3.12+ (None is immortal there)
-          python3 -m venv /opt/uv && /opt/uv/bin/pip install -q uv
-          /opt/uv/bin/uv python install 3.12
-          /opt/uv/bin/uv venv -p 3.12 /opt/venv
-          VIRTUAL_ENV=/opt/venv /opt/uv/bin/uv pip install -q -r requirements.txt pyinstaller pytest
-          /opt/venv/bin/python --version
+          Na primeira vez, o Windows pode mostrar "O Windows protegeu o computador": clique em **Mais informações → Executar assim mesmo**.
+          EOF
+          cat notes.md
 
-      - name: Run tests
-        env:
-          QT_QPA_PLATFORM: offscreen
-        run: /opt/venv/bin/python -m pytest -q
-
-      - name: Build the app folder
-        run: /opt/venv/bin/pyinstaller Tesler.spec --noconfirm
-
-      - name: Build the .deb
-        run: |
-          PATH=/opt/venv/bin:$PATH packaging/linux/build-deb.sh 1.2.0
-          dpkg-deb --info dist/Tesler-linux-amd64.deb
-          desktop-file-validate packaging/linux/dragshift.desktop
-
-      - name: Install the .deb and self-test it
-        env:
-          QT_QPA_PLATFORM: offscreen
-          LANG: C.UTF-8
-          LC_ALL: C.UTF-8
-        run: |
-          mkdir -p e2e_linux_out
-          apt-get install -y -q ./dist/Tesler-linux-amd64.deb 2>&1 | tail -5
-          test -x /usr/bin/dragshift
-          set +e
-          dragshift --selftest > e2e_linux_out/selftest.txt 2>&1
-          rc=$?
-          set -e
-          echo "exit code $rc" >> e2e_linux_out/selftest.txt
-          cat ~/.local/share/Tesler/log.txt >> e2e_linux_out/selftest.txt 2>/dev/null || true
-          if [ $rc -ne 0 ]; then
-            /opt/venv/bin/python -X faulthandler -m dragshift --selftest >> e2e_linux_out/selftest.txt 2>&1 || true
-            cat ~/.local/share/Tesler/log.txt >> e2e_linux_out/selftest.txt 2>/dev/null || true
-          fi
-          cat e2e_linux_out/selftest.txt
-          if [ $rc -ne 0 ]; then
-            tail -25 e2e_linux_out/selftest.txt | sed 's/%/%25/g' | while IFS= read -r l; do echo "::error title=selftest::$l"; done
-            exit $rc
-          fi
-
-      - name: End-to-end on XFCE (Xvfb + xfwm4 with compositor off + Thunar)
-        run: |
-          export DISPLAY=:99 LANG=C.UTF-8 LC_ALL=C.UTF-8
-          Xvfb :99 -screen 0 1280x800x24 >/tmp/xvfb.log 2>&1 &
-          sleep 2
-          eval $(dbus-launch --sh-syntax)
-          /opt/venv/bin/python -c "from dragshift.imaging import gradient; gradient((1280, 800), ['#ffb36b', '#ff5f6d', '#c2508f', '#7b8cff'], 160).save('/tmp/wall.png')"
-          xfwm4 --compositor=off >/tmp/xfwm4.log 2>&1 &
-          sleep 2
-          feh --no-fehbg --bg-fill /tmp/wall.png
-          /opt/venv/bin/python demo/e2e_linux.py || { tail -15 e2e_linux_out/log.txt | sed 's/%/%25/g' | while IFS= read -r l; do echo "::error title=e2e::$l"; done; exit 1; }
-
-      - name: Summary
-        if: always()
-        run: cat e2e_linux_out/results.md >> $GITHUB_STEP_SUMMARY || true
-
-      - name: Save results to the e2e-linux-output branch
-        if: always() && github.event_name == 'push'
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          mkdir -p /tmp/o && cp -r e2e_linux_out/* /tmp/o/ || true
-          git config user.name "github-actions"
-          git config user.email "github-actions@users.noreply.github.com"
-          git checkout --orphan e2e-linux-output
-          git rm -rfq . || true
-          git clean -fdxq -e dist || true
-          cp -r /tmp/o/* . || true
-          echo "Run ${GITHUB_SHA}" > RUN.txt
-          git add -A -- . ':!dist'
-          git commit -qm "Debian/XFCE E2E results ${GITHUB_SHA}"
-          git push -f origin e2e-linux-output
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: linux-deb
-          path: dist/Tesler-linux-amd64.deb
-
-  publish:
-    needs: [windows, macos, linux]
-    if: always() && github.event_name == 'push' && needs.windows.result == 'success'
-    runs-on: ubuntu-latest
-    steps:
       - uses: actions/download-artifact@v4
+        if: steps.check.outputs.exists == 'false'
         with:
+          name: tesler-windows
           path: out
-          merge-multiple: true
 
-      - run: ls -la out
-
-      - name: Publish download (latest)
-        if: github.ref == 'refs/heads/main'
+      - name: Publish release
+        if: steps.check.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest
-          name: Tesler (latest build)
+          tag_name: v${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
+          name: Tesler ${{ env.VERSION }}
+          body_path: notes.md
           make_latest: true
-          body: |
-            **Windows**
-            - **Tesler-Setup.exe** — recommended. Per-user install (no admin), Start menu, start with Windows, right-click "Tesler…" and Send To.
-            - **Tesler.exe** — portable.
-
-            **Mac** (macOS 11+). Easiest, with no security warning, is to paste into Terminal:
-            `curl -fsSL https://raw.githubusercontent.com/llamaboi55/DragShift/main/install-mac.sh | bash`
-
-            Or download:
-            - **Tesler-mac-apple-silicon.dmg** — M1/M2/M3/M4 Macs.
-            - **Tesler-mac-intel.dmg** — Intel Macs.
-            Open the .dmg and drag Tesler to Applications.
-            **First launch (until Tesler is notarized by Apple):** open Tesler once and click **Done** on the warning, then go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to "Tesler was blocked", and confirm. You only do this once.
-            Or in Terminal: `xattr -dr com.apple.quarantine /Applications/Tesler.app`
-
-            **Linux** (Debian 12+, Ubuntu 23.04+, Mint, MX… on X11 desktops such as XFCE, MATE, Cinnamon):
-            - **Tesler-linux-amd64.deb** — install with `sudo apt install ./Tesler-linux-amd64.deb`, then open Tesler from the app menu. Works with or without a compositor.
-
-
-            Built automatically from commit ${{ github.sha }}.
-          files: out/*
-
-      - name: Publish tagged release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: out/*
+          files: |
+            out/Tesler-Setup.exe
+            out/Tesler-Portable.exe
+            out/SHA256SUMS.txt

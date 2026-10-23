@@ -1,10 +1,7 @@
 name: End-to-end test (real Mac desktop)
 
 on:
-  push:
-    branches: [main, e2e-mac]
-    paths-ignore: ["**.md", "docs/**"]
-  workflow_dispatch:
+  workflow_dispatch:   # manual only (inherited from DragShift; not maintained for Tesler)
 
 permissions:
   contents: write

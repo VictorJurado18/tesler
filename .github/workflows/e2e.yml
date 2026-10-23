@@ -1,10 +1,7 @@
 name: End-to-end test (real Windows desktop)
 
 on:
-  push:
-    branches: [main, e2e]
-    paths-ignore: ["**.md", "docs/**"]
-  workflow_dispatch:
+  workflow_dispatch:   # manual only (inherited from DragShift; not maintained for Tesler)
 
 permissions:
   contents: write

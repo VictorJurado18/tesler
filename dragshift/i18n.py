@@ -594,6 +594,7 @@ PT: dict[str, str] = {
     "first {s} s only": "só os primeiros {s} s",
     "Update to Tesler {v}…": "Atualizar para o Tesler {v}…",
     "Restart now": "Reiniciar agora",
+    "The language changes after restarting Tesler": "O idioma muda depois de reiniciar o Tesler",
     "Look": "Visual", "Native (Windows 11)": "Nativo (Windows 11)", "Liquid glass (classic)": "Vidro líquido (clássico)",
     "Theme": "Tema", "Same as Windows": "Igual ao Windows", "Dark": "Escuro", "Light": "Claro",
     "Arrow": "Seta", "Box": "Caixa", "Circle": "Círculo", "Pen": "Caneta", "Marker": "Marca-texto",

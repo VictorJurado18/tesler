@@ -164,8 +164,8 @@ class DragShiftApp(QObject):
                                         lambda: self.menu.got_drag, self)
         self.watcher.set_key(self.settings.get("trigger"))
         self.watcher.show_menu.connect(lambda pos: self.menu.popup(pos))
-        self.watcher.toggle_ring.connect(self.menu.next_ring)
-        self.watcher.hide_menu.connect(self.menu.close_menu)
+        self.watcher.toggle_ring.connect(lambda: self.menu.next_ring())
+        self.watcher.hide_menu.connect(lambda: self.menu.close_menu())
         self.watcher.start()
 
         # files handed over by "Send to", the right-click menu, or a second launch
@@ -533,7 +533,29 @@ class DragShiftApp(QObject):
         w.changed.connect(self._settings_changed)
         w.check_updates.connect(self.open_updates)
         w.restart_requested.connect(self.restart)
+        w.look_changed.connect(lambda: QTimer.singleShot(0, lambda: self.apply_look(w)))
         self.open_window(w)
+
+    def apply_look(self, settings_window=None):
+        """Look or theme picked in Settings: switch now, no restart. Open windows are rebuilt;
+        the menu and notifications pick it up the next time they appear."""
+        from . import theme
+        theme.set_mode(self.settings.get("theme"))
+        theme.set_style(self.settings.get("style"))
+        theme.refresh()
+        self.tray_menu.setStyleSheet(glass.qss())
+        old = self.menu
+        self.menu = RadialMenu(self.build_rings, self.describe)
+        self.menu.activated.connect(self.run_item)
+        old.hide()
+        old.deleteLater()
+        if settings_window is not None:      # reopen Settings in the new look, where it was
+            pos = settings_window.pos()
+            settings_window.close()
+            self.open_settings()
+            for w in self.windows:
+                if isinstance(w, SettingsWindow):
+                    w.move(pos)
 
     def restart(self):
         """Start a fresh copy (it waits for this one to quit) and quit: new look, theme or language."""

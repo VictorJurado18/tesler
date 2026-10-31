@@ -147,6 +147,7 @@ class SettingsWindow(GlassWindow):
     changed = Signal()
     check_updates = Signal()
     restart_requested = Signal()
+    look_changed = Signal()
 
     def __init__(self, settings: Settings):
         super().__init__(tr("Settings"), size=(560, 690))
@@ -207,16 +208,18 @@ class SettingsWindow(GlassWindow):
         r += 1
         grid.addWidget(QLabel(tr("Look")), r, 0)
         self.style_box = combo(STYLES, self.s.get("style"))
-        self.style_box.currentIndexChanged.connect(lambda _: self._save("style", self.style_box.currentData()))
+        self.style_box.currentIndexChanged.connect(
+            lambda _: (self._save("style", self.style_box.currentData()), self.look_changed.emit()))
         grid.addWidget(self.style_box, r, 1)
         r += 1
         grid.addWidget(QLabel(tr("Theme")), r, 0)
         self.theme = combo(THEMES, self.s.get("theme"))
-        self.theme.currentIndexChanged.connect(lambda _: self._save("theme", self.theme.currentData()))
+        self.theme.currentIndexChanged.connect(
+            lambda _: (self._save("theme", self.theme.currentData()), self.look_changed.emit()))
         grid.addWidget(self.theme, r, 1)
         r += 1
         hint_row = QHBoxLayout()
-        lang_hint = QLabel(tr("Takes effect after restarting Tesler"))
+        lang_hint = QLabel(tr("The language changes after restarting Tesler"))
         lang_hint.setObjectName("dim")
         self.restart_btn = QPushButton(tr("Restart now"))
         self.restart_btn.setObjectName("primary")
@@ -226,8 +229,7 @@ class SettingsWindow(GlassWindow):
         hint_row.addWidget(self.restart_btn)
         grid.addLayout(hint_row, r, 1)
         r += 1
-        for box in (self.lang, self.style_box, self.theme):
-            box.currentIndexChanged.connect(lambda _: self.restart_btn.show())
+        self.lang.currentIndexChanged.connect(lambda _: self.restart_btn.show())
 
         if IS_WIN or IS_MAC or IS_LINUX:
             self.auto = QCheckBox(tr("Start Tesler with Windows" if IS_WIN else "Open Tesler at login"))

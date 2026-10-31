@@ -2,6 +2,17 @@
 
 Cada versão publicada tem uma seção aqui. O app mostra a seção da versão nova na primeira vez que ela abre, e o GitHub usa o mesmo texto nas notas do release.
 
+## 2.0.2
+
+### Melhorias
+- **Visual e tema mudam na hora:** ao trocar entre Nativo e Vidro líquido, ou o tema claro/escuro, a mudança vale na hora, sem reiniciar.
+- **Idioma:** ao trocar, aparece o botão **Reiniciar agora**, que fecha e abre o Tesler sozinho.
+- **Atualizações:** o Tesler procura versões novas a cada 6 horas, mesmo aberto direto na bandeja. Se a notificação passar despercebida, o menu da bandeja mostra **Atualizar para o Tesler X…**.
+
+### Correções
+- **JSON com uma lista dentro** (por exemplo, uma pessoa e os endereços dela): a conversão mantém os campos do registro e gera uma linha por item. Antes, só a lista era convertida.
+- As configurações são gravadas assim que você muda alguma coisa.
+
 ## 2.0.1
 
 ### Correções
